@@ -1,0 +1,1 @@
+{"root":["./src/App.tsx","./src/api.ts","./src/main.tsx","./src/components/Generator.tsx","./src/components/PartPicker.tsx","./src/components/SpriteCard.tsx","./src/components/SpriteViewer.tsx","./src/lib/act.ts","./src/lib/apng.ts","./src/lib/compose.ts","./src/lib/spr.ts","./src/lib/thumbs.ts","./src/lib/useInView.ts","./server/index.ts","./vite.config.ts"],"version":"5.9.3"}
