@@ -1,4 +1,4 @@
-# sprite-manager
+# ragnarok-sprite-generator
 
 Browse and preview `.spr` / `.act` sprite folders from a local `sprite/` directory.
 
@@ -14,10 +14,10 @@ npm install
 npm run dev      # server on :3001, client on :5173 (proxies /api)
 ```
 
-Put your sprite folders in `sprite/` (gitignored):
+Put your sprite folders in `data/` (gitignored):
 
 ```
-sprite/
+data/
   몬스터/
     포링/
       포링.spr

@@ -307,5 +307,5 @@ if (process.env.NODE_ENV === "production") {
 
 await fs.mkdir(DATA_DIR, { recursive: true });
 app.listen(PORT, () => {
-  console.log(`[sprite-manager] api on http://localhost:${PORT} serving ${DATA_DIR}`);
+  console.log(`[ragnarok-sprite-generator] api on http://localhost:${PORT} serving ${DATA_DIR}`);
 });
