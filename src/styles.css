@@ -31,17 +31,6 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 .topbar h1 { font-size: 18px; margin: 0; }
 
-.crumbs { display: flex; align-items: center; flex-wrap: wrap; gap: 2px; flex: 1; }
-.crumbs button {
-  background: none;
-  border: none;
-  padding: 2px 4px;
-  border-radius: 4px;
-  color: var(--accent);
-}
-.crumbs button:hover { background: var(--panel); }
-.crumbs .sep { color: var(--muted); }
-
 .filter {
   background: var(--panel);
   border: 1px solid var(--line);
@@ -52,71 +41,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
 h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
 
-.folders { display: flex; flex-wrap: wrap; gap: 8px; }
-.folder {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 8px 12px;
-  max-width: 260px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.folder:hover { border-color: var(--accent); }
-
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
-  gap: 10px;
-}
-.card {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 8px;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.card:hover:not(:disabled) { border-color: var(--accent); }
-.card-preview {
-  height: 100px;
-  display: grid;
-  place-items: center;
-  background:
-    repeating-conic-gradient(#00000022 0% 25%, transparent 0% 50%) 0 0 / 16px 16px;
-  border-radius: 6px;
-}
-.card img { image-rendering: pixelated; }
-.card-name { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.card-meta { font-size: 11px; color: var(--muted); }
-
-.empty, .error-banner { color: var(--muted); }
 .error-banner { color: #ff8a8a; }
 .error { color: #ff8a8a; font-weight: 700; }
-
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: #000c;
-  display: grid;
-  place-items: center;
-  padding: 24px;
-}
-.modal {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 16px;
-  width: min(760px, 100%);
-  max-height: 90vh;
-  overflow: auto;
-}
-.modal header { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-.modal header h2 { font-size: 15px; text-transform: none; letter-spacing: 0; color: var(--text); }
-.modal header button { background: none; border: none; font-size: 16px; }
 
 .stage {
   display: block;
@@ -139,17 +65,6 @@ h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: v
 
 .meta { text-align: center; color: var(--muted); font-size: 12px; }
 
-.frames { display: flex; flex-wrap: wrap; gap: 8px; }
-.frame {
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 4px;
-  display: grid;
-  place-items: center;
-  min-width: 56px;
-}
-.frame span { font-size: 10px; color: var(--muted); }
-
 .sentinel { height: 1px; }
 
 .tabs { display: flex; gap: 4px; }
@@ -162,8 +77,8 @@ h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: v
 }
 .tabs button.on { background: var(--panel); border-color: var(--line); color: var(--text); }
 
-.generator { display: grid; grid-template-columns: minmax(240px, 300px) 1fr; gap: 16px; padding-top: 16px; }
-@media (max-width: 780px) { .generator { grid-template-columns: 1fr; } }
+.generator { display: grid; grid-template-columns: minmax(520px, 48%) 1fr; gap: 16px; padding-top: 16px; }
+@media (max-width: 900px) { .generator { grid-template-columns: 1fr; } }
 
 .panel, .stage-panel {
   background: var(--panel);
@@ -174,21 +89,40 @@ h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: v
   flex-direction: column;
   gap: 12px;
 }
+
+/* Parts panel: two pickers per row so more of the build is visible at once. */
+.panel {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
+}
+.panel > .row { grid-column: 1 / -1; }
+@media (max-width: 900px) { .panel { grid-template-columns: minmax(0, 1fr); } }
 .stage-panel { align-items: center; }
 
 .row { display: flex; gap: 12px; flex-wrap: wrap; }
 .row label, .picker { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); flex: 1; min-width: 120px; }
 
-.picker-label { display: flex; justify-content: space-between; align-items: baseline; }
+.picker-label { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .picker-label em { font-style: normal; font-size: 10px; opacity: .7; }
+.picker-empty {
+  margin: 0;
+  padding: 12px;
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+  background: var(--bg);
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+}
 .picker .filter { padding: 4px 8px; font-size: 12px; }
 
 .tile-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, 74px);
-  justify-content: space-between;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  justify-items: center;
   gap: 6px;
-  max-height: 260px;
+  max-height: 210px;
   overflow-y: auto;
   overflow-x: hidden;
   padding: 6px;
@@ -216,11 +150,10 @@ h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: v
 .tile:hover { border-color: var(--line); }
 .tile.on { border-color: var(--accent); background: var(--panel); }
 .tile-preview {
-  width: 64px;
-  height: 64px;
-  min-width: 64px;
-  min-height: 64px;
-  flex: 0 0 64px;
+  /* 64px wherever there is room, shrinking only on a very narrow panel. */
+  width: 100%;
+  max-width: 64px;
+  aspect-ratio: 1;
   overflow: hidden;
   display: grid;
   place-items: center;
@@ -229,8 +162,8 @@ h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: v
 }
 .tile-preview.none { color: var(--muted); font-size: 20px; }
 .tile-preview img {
-  max-width: 64px;
-  max-height: 64px;
+  max-width: 100%;
+  max-height: 100%;
   width: auto;
   height: auto;
   object-fit: contain;
@@ -239,7 +172,7 @@ h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: v
 .tile-name {
   font-size: 10px;
   color: var(--muted);
-  max-width: 68px;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -261,3 +194,6 @@ h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: v
   padding: 6px 12px;
 }
 .stage-panel .controls button:disabled { opacity: .5; cursor: default; }
+
+/* Monsters tab has a single picker, so it does not need two columns. */
+.panel.one-column { grid-template-columns: minmax(0, 1fr); }

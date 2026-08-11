@@ -39,6 +39,10 @@ export type JobFolders = {
   weaponFolder: string;
   /** Filename prefix of this job's weapon sprites. */
   weaponPrefix: string;
+  /** Whether weapon file names carry the gender: `검사_남_검` but `활용병_활`. */
+  weaponHasGender: boolean;
+  /** False when no table entry matched, so callers can probe the filesystem. */
+  matched: boolean;
 };
 
 /** Job name (as it appears in a body sprite filename) → folders. */
@@ -56,18 +60,57 @@ for (let id = 0; id < jobNames.length; id++) {
     job,
     weaponFolder: weaponFolder || job,
     weaponPrefix: weaponPrefix || weaponFolder || job,
+    weaponHasGender: true,
+    matched: true,
   });
 }
 
 /**
- * Resolve a job name taken off a body sprite (`{job}_{gender}`). Unknown names
- * -- mercenaries and costume bodies that are not in the table -- fall back to
- * using the name for everything, which is what the folders look like anyway.
+ * Mercenaries keep their weapons in one shared folder, named after the
+ * mercenary rather than a job (RESOLVER.md, "Weapon / Mercenary").
  */
-export function foldersForJob(job: string): JobFolders {
-  return (
-    byJobName.get(job.toLowerCase()) ?? { job, weaponFolder: job, weaponPrefix: job }
-  );
+const MERCENARIES: Record<string, JobFolders> = Object.fromEntries(
+  ["활용병", "창용병", "검용병"].map((name) => [
+    name,
+    {
+      job: name,
+      weaponFolder: "용병",
+      weaponPrefix: name,
+      weaponHasGender: false, // 인간족/용병/활용병_활, with no gender segment
+      matched: true,
+    },
+  ])
+);
+
+/**
+ * Resolve the job of a body sprite file name.
+ *
+ * Body files are not always a bare `{job}_{gender}`: the data set also carries
+ * variants like `기사_h_여` and `무희_여_바지` whose full name is in no table.
+ * Walking the underscore-separated prefixes longest-first finds the real job
+ * (`기사_h_여` → `기사`, `페코페코_기사_h_여` → `페코페코_기사`) while still
+ * preferring an exact table hit when there is one.
+ *
+ * Names that match nothing -- costume bodies such as 결혼 or 산타 -- keep their
+ * own name, and simply have no weapon folder on disk.
+ */
+export function foldersForJob(bodyName: string): JobFolders {
+  const name = bodyName.replace(/\.(spr|act)$/i, "");
+
+  const exact = byJobName.get(name.toLowerCase());
+  if (exact) return exact;
+
+  const tokens = name.split("_");
+  for (let length = tokens.length; length > 0; length--) {
+    const candidate = tokens.slice(0, length).join("_");
+    const merc = MERCENARIES[candidate];
+    if (merc) return merc;
+    const hit = byJobName.get(candidate.toLowerCase());
+    if (hit) return hit;
+  }
+
+  return { job: name, weaponFolder: name, weaponPrefix: name, weaponHasGender: true, matched: false };
 }
 
 export const jobCount = byJobName.size;
+

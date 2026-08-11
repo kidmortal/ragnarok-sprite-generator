@@ -1,34 +1,5 @@
-export type Entry = {
-  id: string;
-  name: string;
-  type: "dir" | "file";
-  ext: string;
-};
-
-export type Listing = {
-  id: string;
-  crumbs: { id: string; name: string }[];
-  items: Entry[];
-};
-
-export async function listDir(id: string): Promise<Listing> {
-  const res = await fetch(`/api/list?id=${encodeURIComponent(id)}`);
-  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? res.statusText);
-  return res.json();
-}
-
 export async function fetchFile(id: string): Promise<ArrayBuffer> {
   const res = await fetch(`/api/file?id=${encodeURIComponent(id)}`);
-  if (!res.ok) throw new Error(res.statusText);
-  return res.arrayBuffer();
-}
-
-/** Fetch a byte range. `start < 0` requests that many bytes from the end. */
-export async function fetchRange(id: string, start: number, end?: number): Promise<ArrayBuffer> {
-  const spec = start < 0 ? `-${-start}` : `${start}-${end ?? ""}`;
-  const res = await fetch(`/api/file?id=${encodeURIComponent(id)}`, {
-    headers: { Range: `bytes=${spec}` },
-  });
   if (!res.ok) throw new Error(res.statusText);
   return res.arrayBuffer();
 }
@@ -56,14 +27,21 @@ export type Equipment = {
   garments: PartEntry[];
 };
 
+/** `body` is the body sprite's file name; the server derives the job from it. */
 export async function fetchEquipment(
   race: string,
   gender: string,
-  job: string
+  body: string
 ): Promise<Equipment> {
   const res = await fetch(
-    `/api/equipment?race=${race}&gender=${gender}&job=${encodeURIComponent(job)}`
+    `/api/equipment?race=${race}&gender=${gender}&body=${encodeURIComponent(body)}`
   );
+  if (!res.ok) throw new Error(res.statusText);
+  return res.json();
+}
+
+export async function fetchMonsters(): Promise<PartEntry[]> {
+  const res = await fetch("/api/monsters");
   if (!res.ok) throw new Error(res.statusText);
   return res.json();
 }

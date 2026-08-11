@@ -30,6 +30,17 @@ export const PLAYER_ACTIONS = [
   { name: "Skill", base: 96 },
 ] as const;
 
+/**
+ * Monsters use a shorter action list than players (zrenderer's MonsterAction).
+ */
+export const MONSTER_ACTIONS = [
+  { name: "Stand", base: 0 },
+  { name: "Move", base: 8 },
+  { name: "Attack", base: 16 },
+  { name: "Hurt", base: 24 },
+  { name: "Dead", base: 32 },
+] as const;
+
 export const DIRECTIONS = [
   "South",
   "South-west",
@@ -201,6 +212,24 @@ function drawOpsForFrame(
   }
 
   return ops;
+}
+
+/**
+ * Index of the first action that actually draws something.
+ *
+ * Weapons and shields are blank in the stand pose -- their layers carry
+ * `sprIndex: -1` and zero alpha -- so a preview has to look further along the
+ * act to find a frame with content.
+ */
+export function firstDrawableAction(part: Part): number {
+  for (let index = 0; index < part.act.actions.length; index++) {
+    for (const motion of part.act.actions[index].motions) {
+      if (motion.layers.some((layer) => layer.sprIndex >= 0 && layer.color[3] > 0)) {
+        return index;
+      }
+    }
+  }
+  return 0;
 }
 
 /** Bounding box of every frame of the action, relative to the character origin. */

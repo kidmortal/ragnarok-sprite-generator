@@ -58,31 +58,6 @@ function resolveId(id: string | undefined): Buffer {
 const join = (parent: Buffer, name: Buffer): Buffer =>
   parent.length ? Buffer.concat([parent, Buffer.from(path.sep), name]) : name;
 
-/** Minimal single-range parser: `bytes=a-b`, `bytes=a-`, `bytes=-suffix`. */
-function parseRange(
-  header: string | undefined,
-  size: number
-): { start: number; end: number; size: number } | null | "invalid" {
-  if (!header) return null;
-  const match = /^bytes=(\d*)-(\d*)$/.exec(header.trim());
-  if (!match) return "invalid";
-  const [, rawStart, rawEnd] = match;
-  let start: number;
-  let end: number;
-  if (rawStart === "") {
-    if (rawEnd === "") return "invalid";
-    start = Math.max(size - Number(rawEnd), 0); // suffix range
-    end = size - 1;
-  } else {
-    start = Number(rawStart);
-    end = rawEnd === "" ? size - 1 : Math.min(Number(rawEnd), size - 1);
-  }
-  if (!Number.isFinite(start) || !Number.isFinite(end) || start > end || start >= size) {
-    return "invalid";
-  }
-  return { start, end, size };
-}
-
 const app = express();
 
 /**
@@ -135,15 +110,42 @@ async function listParts(relative: string): Promise<PartEntry[]> {
   return parts.sort((a, b) => a.name.localeCompare(b.name, "ko"));
 }
 
+/** Names of the sub-directories of a folder inside the data directory. */
+async function listDirs(relative: string): Promise<string[]> {
+  try {
+    const entries = await fs.readdir(resolveId(encodeId(Buffer.from(relative))), {
+      encoding: "buffer" as never,
+      withFileTypes: true,
+    });
+    return entries
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => displayName(entry.name as unknown as Buffer));
+  } catch {
+    return [];
+  }
+}
+
 app.get("/api/parts", async (req, res) => {
   const race = RACES[(req.query.race as keyof typeof RACES) ?? "human"] ?? RACES.human;
   const gender = GENDERS[(req.query.gender as keyof typeof GENDERS) ?? "male"] ?? GENDERS.male;
 
-  const [bodies, heads, headgears] = await Promise.all([
+  const [allBodies, heads, headgears] = await Promise.all([
     listParts(`${race.root}/몸통/${gender}`),
     listParts(`${race.root}/머리통/${gender}`),
     listParts(`악세사리/${gender}${race.headgearSuffix}`),
   ]);
+
+  // Only offer bodies whose class actually has weapon sprites. The folder
+  // listings are memoized across the whole sweep, so this costs a handful of
+  // readdirs rather than one per body.
+  const folders = new Map<string, Promise<PartEntry[]>>();
+  const withWeapons = await Promise.all(
+    allBodies.map(async (body) => {
+      const { weapons } = await weaponsForBody(race.root, gender, body.name, folders);
+      return weapons.length > 0 ? body : null;
+    })
+  );
+  const bodies = withWeapons.filter((body): body is PartEntry => body !== null);
 
   res.json({
     race: race.label,
@@ -163,27 +165,78 @@ app.get("/api/parts", async (req, res) => {
  *   shields   방패/{job}/{job}_{gender}{name}
  *   garments  로브/{garment}/{gender}/{job}_{gender}, else 로브/{garment}/{garment}
  *
- * The job is taken from the chosen body sprite, whose name is `{job}_{gender}`.
+ * The client sends the body sprite's file name and the resolver derives the job
+ * from it, since body files are not always a bare `{job}_{gender}`.
  */
+/**
+ * Weapons for one body sprite, resolved through the job tables. `folders`
+ * memoizes directory listings so scanning a whole body list stays cheap.
+ */
+async function weaponsForBody(
+  raceRoot: string,
+  gender: string,
+  bodyName: string,
+  folders: Map<string, Promise<PartEntry[]>>
+): Promise<{ job: string; weaponFolder: string; weapons: PartEntry[] }> {
+  const listCached = (relative: string) => {
+    let pending = folders.get(relative);
+    if (!pending) {
+      pending = listParts(relative);
+      folders.set(relative, pending);
+    }
+    return pending;
+  };
+
+  const resolved = foldersForJob(bodyName);
+  let { weaponFolder, weaponPrefix } = resolved;
+
+  // Bodies with no table entry (운영자2_남, 무희바지_남, costume sets) can still
+  // have a weapon folder on disk whose name is a prefix of the body name --
+  // note a *string* prefix, not a token one: 운영자2_남 lives under 운영자.
+  let fallbackFolder = "";
+  if (!resolved.matched) {
+    for (const dir of await listDirs(raceRoot)) {
+      if (bodyName.startsWith(dir) && dir.length > fallbackFolder.length) fallbackFolder = dir;
+    }
+    if (fallbackFolder) weaponFolder = fallbackFolder;
+  }
+
+  const files = await listCached(`${raceRoot}/${weaponFolder}`);
+
+  // Table jobs have an authoritative prefix; fallback folders hold files named
+  // either after the body itself (운영자2_남_검) or after the folder (무희_남_검).
+  const prefixes = (
+    resolved.matched
+      ? [resolved.weaponHasGender ? `${weaponPrefix}_${gender}` : weaponPrefix]
+      : [bodyName, `${fallbackFolder}_${gender}`]
+  )
+    .filter(Boolean)
+    .map((prefix) => prefix.toLowerCase());
+
+  const weapons = files.filter(
+    (part) =>
+      prefixes.some((prefix) => part.name.toLowerCase().startsWith(prefix)) &&
+      !part.name.endsWith("_검광")
+  );
+
+  return { job: resolved.job, weaponFolder, weapons };
+}
+
 app.get("/api/equipment", async (req, res) => {
   const race = RACES[(req.query.race as keyof typeof RACES) ?? "human"] ?? RACES.human;
   const gender = GENDERS[(req.query.gender as keyof typeof GENDERS) ?? "male"] ?? GENDERS.male;
-  const requested = typeof req.query.job === "string" ? req.query.job : "";
+  const bodyName = typeof req.query.body === "string" ? req.query.body : "";
 
-  if (!requested) return res.json({ job: "", weapons: [], shields: [], garments: [] });
+  if (!bodyName) return res.json({ job: "", weapons: [], shields: [], garments: [] });
 
-  const { job, weaponFolder, weaponPrefix } = foldersForJob(requested);
-
-  const [weaponFiles, shieldFiles] = await Promise.all([
-    listParts(`${race.root}/${weaponFolder}`),
-    listParts(`방패/${job}`),
-  ]);
-
-  const weaponPrefixLower = `${weaponPrefix}_${gender}`.toLowerCase();
-  const weapons = weaponFiles.filter(
-    (p) => p.name.toLowerCase().startsWith(weaponPrefixLower) && !p.name.endsWith("_검광")
+  const { job, weaponFolder, weapons } = await weaponsForBody(
+    race.root,
+    gender,
+    bodyName,
+    new Map()
   );
 
+  const shieldFiles = await listParts(`방패/${job}`);
   const shieldPrefixLower = `${job}_${gender}`.toLowerCase();
   const shields = shieldFiles.filter((p) => p.name.toLowerCase().startsWith(shieldPrefixLower));
 
@@ -215,51 +268,9 @@ app.get("/api/equipment", async (req, res) => {
   res.json({ job, weaponFolder, weapons, shields, garments });
 });
 
-app.get("/api/list", async (req, res) => {
-  const id = typeof req.query.id === "string" ? req.query.id : undefined;
-  let abs: Buffer;
-  let rel: Buffer;
-  try {
-    abs = resolveId(id);
-    rel = id ? decodeId(id) : Buffer.alloc(0);
-  } catch (err) {
-    return res.status(400).json({ error: (err as Error).message });
-  }
-
-  try {
-    const entries = await fs.readdir(abs, { encoding: "buffer" as never, withFileTypes: true });
-    const items = entries.map((entry) => {
-      const nameBuf = entry.name as unknown as Buffer;
-      const childRel = join(rel, nameBuf);
-      const name = displayName(nameBuf);
-      const ext = path.extname(name).toLowerCase();
-      return {
-        id: encodeId(childRel),
-        name,
-        type: entry.isDirectory() ? ("dir" as const) : ("file" as const),
-        ext,
-      };
-    });
-
-    items.sort((a, b) =>
-      a.type === b.type ? a.name.localeCompare(b.name, "ko") : a.type === "dir" ? -1 : 1
-    );
-
-    const crumbs: { id: string; name: string }[] = [];
-    if (rel.length) {
-      let acc: Buffer = Buffer.alloc(0);
-      for (const part of rel.toString("binary").split(path.sep)) {
-        const partBuf = Buffer.from(part, "binary");
-        acc = join(acc, partBuf);
-        crumbs.push({ id: encodeId(acc), name: displayName(partBuf) });
-      }
-    }
-
-    res.json({ id: id ?? "", crumbs, items });
-  } catch (err) {
-    const code = (err as NodeJS.ErrnoException).code;
-    res.status(code === "ENOENT" ? 404 : 500).json({ error: (err as Error).message });
-  }
+/** Monster sprites are standalone `.spr`/`.act` pairs in `몬스터/`. */
+app.get("/api/monsters", async (_req, res) => {
+  res.json(await listParts("몬스터"));
 });
 
 app.get("/api/file", async (req, res) => {
@@ -273,26 +284,8 @@ app.get("/api/file", async (req, res) => {
   }
   try {
     res.setHeader("Content-Type", "application/octet-stream");
-    res.setHeader("Accept-Ranges", "bytes");
     res.setHeader("Cache-Control", "no-cache");
-
-    // Range support lets thumbnails pull just the header and the trailing
-    // palette instead of a whole multi-megabyte sprite.
-    const range = parseRange(req.headers.range, (await fs.stat(abs)).size);
-    if (range === "invalid") return res.status(416).end();
-    if (!range) return res.send(await fs.readFile(abs));
-
-    const { start, end, size } = range;
-    const handle = await fs.open(abs, "r");
-    try {
-      const buf = Buffer.alloc(end - start + 1);
-      const { bytesRead } = await handle.read(buf, 0, buf.length, start);
-      res.status(206);
-      res.setHeader("Content-Range", `bytes ${start}-${end}/${size}`);
-      res.send(buf.subarray(0, bytesRead));
-    } finally {
-      await handle.close();
-    }
+    res.send(await fs.readFile(abs));
   } catch (err) {
     const code = (err as NodeJS.ErrnoException).code;
     res.status(code === "ENOENT" ? 404 : 500).json({ error: (err as Error).message });

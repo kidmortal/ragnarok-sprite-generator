@@ -37,25 +37,7 @@ class Reader {
   }
 }
 
-export type ParseOptions = {
-  /**
-   * Stop after this many frames. Frames are laid out sequentially (and the
-   * palette lives at the end of the file), so a thumbnail only needs the first
-   * one -- decoding the rest is pure waste when browsing a large folder.
-   */
-  maxFrames?: number;
-  /**
-   * Byte length of real, contiguous file content at the start of the buffer.
-   * Thumbnails splice the trailing palette onto a partial head slice, so a
-   * frame reaching past this point would silently decode spliced bytes as
-   * pixels -- throw instead, and let the caller refetch the whole file.
-   */
-  validBytes?: number;
-};
-
-export function parseSpr(buffer: ArrayBuffer, options: ParseOptions = {}): Spr {
-  const limit = options.maxFrames ?? Infinity;
-  const validBytes = options.validBytes ?? buffer.byteLength;
+export function parseSpr(buffer: ArrayBuffer): Spr {
   const bytes = new Uint8Array(buffer);
   if (bytes[0] !== 0x53 || bytes[1] !== 0x50) {
     throw new Error("Not a .spr file (missing SP magic)");
@@ -74,20 +56,15 @@ export function parseSpr(buffer: ArrayBuffer, options: ParseOptions = {}): Spr {
 
   const frames: SprFrame[] = [];
 
-  const requireBytes = (count: number) => {
-    if (r.offset + count > validBytes) throw new Error("frame extends past fetched range");
-  };
 
-  for (let i = 0; i < indexedCount && frames.length < limit; i++) {
+  for (let i = 0; i < indexedCount; i++) {
     const width = r.u16();
     const height = r.u16();
     const size = width * height;
     const indices = new Uint8Array(size);
 
     if (version >= 2.1) {
-      requireBytes(2);
       const compressed = r.u16();
-      requireBytes(compressed);
       const end = r.offset + compressed;
       let p = 0;
       while (r.offset < end && p < size) {
@@ -102,7 +79,6 @@ export function parseSpr(buffer: ArrayBuffer, options: ParseOptions = {}): Spr {
       }
       r.offset = end;
     } else {
-      requireBytes(size);
       for (let p = 0; p < size; p++) indices[p] = r.u8();
     }
 
@@ -115,11 +91,10 @@ export function parseSpr(buffer: ArrayBuffer, options: ParseOptions = {}): Spr {
     });
   }
 
-  for (let i = 0; i < rgbaCount && frames.length < limit; i++) {
+  for (let i = 0; i < rgbaCount; i++) {
     const width = r.u16();
     const height = r.u16();
     const size = width * height;
-    requireBytes(size * 4);
     const pixels = new Uint8ClampedArray(size * 4);
     // Stored as ABGR, bottom-up.
     for (let row = height - 1; row >= 0; row--) {

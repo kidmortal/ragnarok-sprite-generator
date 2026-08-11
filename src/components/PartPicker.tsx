@@ -46,6 +46,9 @@ export function PartPicker({ label, entries, value, onChange, optional }: Props)
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
       />
+      {entries.length === 0 ? (
+        <p className="picker-empty">None for this job</p>
+      ) : (
       <div className="tile-grid">
         {optional && (
           <button
@@ -67,6 +70,7 @@ export function PartPicker({ label, entries, value, onChange, optional }: Props)
         ))}
         {shown < matches.length && <div ref={sentinelRef} className="sentinel" />}
       </div>
+      )}
     </div>
   );
 }
