@@ -25,6 +25,14 @@ browser.
 - **Export spritesheet** — a strip plus a JSON sidecar with frame size, grid,
   delay and the part names.
 
+**Batch export tab** — every selected part as its **own** spritesheet, in one zip:
+
+- Pick which kinds to emit (bodies, heads, headgears, weapons, shields, garments, monsters),
+  which races and genders, and which actions.
+- One PNG per part plus a single `manifest.json` carrying every part's metadata inline.
+- This is the path that feeds a game engine that composes characters at **runtime** — one
+  sheet per body and one per head, rather than one per combination. See `PLAN.md`.
+
 **Monsters tab** — the same preview and exports for any of the ~986 sprites in
 `몬스터/`. Monsters are standalone sprites with no head, equipment or attach
 points, so the tab is just a picker: choose one, pick an action (stand, move,
@@ -141,6 +149,31 @@ the 147 male human bodies, 138 of 150 female. The rest are dropped because the
 data has nothing to give them: costume bodies such as 결혼 or 산타 have no weapon
 folder at all, and Madogear has only weapon *slash* sprites. A Shield or Garment
 picker can still read "None for this job" for a listed body.
+
+### Exporting parts separately
+
+The single-composition export bakes a finished character. The batch export does the opposite: it
+renders each part **on its own**, in a frame a game engine can reassemble.
+
+It works because zrenderer's child offset factors:
+
+```
+childLayer.x + bodyAnchor.x - ownAnchor.x
+=  (childLayer.x - ownAnchor.x)  +  bodyAnchor.x
+   \___ baked into the head sheet ___/  \_ shipped in the body's JSON _/
+```
+
+So `src/lib/partSheet.ts` renders a head or headgear with its origin **at its own attach point**,
+which makes that sheet independent of whatever body it ends up on, and each body sheet carries its
+per-frame anchor table. Heads x bodies becomes additive rather than multiplicative: 138 bodies plus
+29 heads is 167 sheets, not 4002. Everything that is not parented — body, weapon, shield, garment —
+is already aligned to the character origin and needs no correction at all.
+
+Each sheet declares an `origin` pixel, and what that pixel *means* is the whole contract: the
+character origin for an unparented part, the attach point for a head or headgear.
+
+`src/lib/zip.ts` is a store-only zip writer, because a few hundred browser downloads is not a
+usable export and the PNGs are already compressed. It reuses `crc32` from the APNG encoder.
 
 ### Previews in the pickers
 

@@ -39,8 +39,8 @@ export const TILE = 64;
  * .spr: a body's first spr frame is only a fragment of the sprite, so it makes
  * an unrecognisable thumbnail.
  */
-export function loadPartThumb(sprId: string, actId: string): Promise<Thumb> {
-  const key = `part:${sprId}|${actId}`;
+export function loadPartThumb(sprId: string, actId: string, tile = TILE): Promise<Thumb> {
+  const key = `part:${sprId}|${actId}|${tile}`;
   const cached = cache.get(key);
   if (cached) return cached;
 
@@ -70,7 +70,7 @@ export function loadPartThumb(sprId: string, actId: string): Promise<Thumb> {
     if (!source || !source.width || !source.height) throw new Error("empty part");
 
     // Fit inside the tile without ever upscaling past 3x.
-    const scale = Math.min(TILE / source.width, TILE / source.height, 3);
+    const scale = Math.min(tile / source.width, tile / source.height, 3);
     const out = document.createElement("canvas");
     out.width = Math.max(Math.round(source.width * scale), 1);
     out.height = Math.max(Math.round(source.height * scale), 1);

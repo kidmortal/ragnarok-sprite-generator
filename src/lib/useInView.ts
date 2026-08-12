@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 /**
  * Reports whether a node is in (or near) the viewport.
@@ -6,13 +6,18 @@ import { useEffect, useRef, useState } from "react";
  * With `once`, it latches on first sight -- right for a thumbnail, which is
  * worth keeping rather than re-decoding on every scroll. Pass `once: false`
  * for a paging sentinel that must keep reporting as content grows under it.
+ *
+ * The returned `ref` is a callback ref on purpose: a sentinel is unmounted and
+ * remounted as its grid is filtered, and a plain ref object would leave the
+ * observer watching the old, detached node.
  */
 export function useInView<T extends HTMLElement>(rootMargin = "300px", once = true) {
-  const ref = useRef<T>(null);
+  const [node, setNode] = useState<T | null>(null);
   const [inView, setInView] = useState(false);
 
+  const ref = useCallback((next: T | null) => setNode(next), []);
+
   useEffect(() => {
-    const node = ref.current;
     if (!node || (once && inView)) return;
     const observer = new IntersectionObserver(
       (entries) => {
@@ -24,7 +29,7 @@ export function useInView<T extends HTMLElement>(rootMargin = "300px", once = tr
     );
     observer.observe(node);
     return () => observer.disconnect();
-  }, [inView, rootMargin, once]);
+  }, [node, inView, rootMargin, once]);
 
   return { ref, inView };
 }

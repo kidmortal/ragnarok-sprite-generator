@@ -1,8 +1,9 @@
 import { useState } from "react";
+import { ExportTab } from "./components/ExportTab";
 import { Generator } from "./components/Generator";
 import { MonsterTab } from "./components/MonsterTab";
 
-type Tab = "character" | "monster";
+type Tab = "character" | "monster" | "export";
 
 export function App() {
   const [tab, setTab] = useState<Tab>("character");
@@ -18,10 +19,15 @@ export function App() {
           <button className={tab === "monster" ? "on" : ""} onClick={() => setTab("monster")}>
             Monsters
           </button>
+          <button className={tab === "export" ? "on" : ""} onClick={() => setTab("export")}>
+            Batch export
+          </button>
         </div>
       </header>
 
-      {tab === "character" ? <Generator /> : <MonsterTab />}
+      {tab === "character" && <Generator />}
+      {tab === "monster" && <MonsterTab />}
+      {tab === "export" && <ExportTab />}
     </div>
   );
 }

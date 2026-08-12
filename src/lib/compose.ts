@@ -72,7 +72,7 @@ export const Z_INDEX: Record<PartKind, number> = {
 };
 
 /** Only the head and headgears hang off the body's attach point. */
-const isParented = (kind: PartKind) => kind === "head" || kind === "headgear";
+export const isParented = (kind: PartKind) => kind === "head" || kind === "headgear";
 
 export type Part = {
   kind: PartKind;
@@ -103,7 +103,7 @@ export function frameCount(parts: Part[], options: ComposeOptions): number {
   return action?.motions.length ?? 0;
 }
 
-function actionIndex(part: Part, options: ComposeOptions): number {
+export function actionIndex(part: Part, options: ComposeOptions): number {
   const index = options.actionBase + options.direction;
   return index < part.act.actions.length ? index : index % part.act.actions.length;
 }
@@ -112,7 +112,12 @@ function actionIndex(part: Part, options: ComposeOptions): number {
  * Which motion of a part to show for a given body frame. Head and headgears
  * hold a pose per head direction during stand/sit instead of animating.
  */
-function motionIndex(part: Part, options: ComposeOptions, frame: number, motions: number): number {
+export function motionIndex(
+  part: Part,
+  options: ComposeOptions,
+  frame: number,
+  motions: number
+): number {
   if (motions === 0) return 0;
   if (isParented(part.kind) && isStandOrSit(options.actionBase) && motions >= 3) {
     // Animated headgears carry several frames per head direction.
@@ -120,6 +125,33 @@ function motionIndex(part: Part, options: ComposeOptions, frame: number, motions
     return options.headDirection * perDirection + (frame % perDirection);
   }
   return frame % motions;
+}
+
+/**
+ * How many frames this part *itself* runs for in the action, as opposed to how
+ * many the body will ask it for. Exporting a part on its own has to use this;
+ * live composition uses the body's count and wraps every other part with
+ * `motionIndex`.
+ */
+export function ownFrameCount(part: Part, options: ComposeOptions): number {
+  const motions = part.act.actions[actionIndex(part, options)]?.motions.length ?? 0;
+  if (isParented(part.kind) && isStandOrSit(options.actionBase) && motions >= 3) {
+    // A pose per head direction rather than an animation, so only a third of
+    // the motions belong to the facing being exported.
+    return Math.floor(motions / 3);
+  }
+  return motions;
+}
+
+/** The part's own attach point for a frame, in character coordinates. */
+export function ownAnchor(
+  part: Part,
+  options: ComposeOptions,
+  frame: number
+): { x: number; y: number } {
+  const motions = part.act.actions[actionIndex(part, options)]?.motions ?? [];
+  const anchor = motions[motionIndex(part, options, frame, motions.length)]?.anchors[0];
+  return { x: anchor?.x ?? 0, y: anchor?.y ?? 0 };
 }
 
 /** Offset that hangs a child part on the body's attach point. */
@@ -143,7 +175,7 @@ function anchorOffset(
   };
 }
 
-type DrawOp = {
+export type DrawOp = {
   canvas: HTMLCanvasElement;
   x: number;
   y: number;
@@ -178,6 +210,45 @@ export function buildFrameCache(parts: Part[]): FrameCache {
   return cache;
 }
 
+/**
+ * Ops for one part at one frame, with every layer shifted by `offset`.
+ *
+ * Live composition passes the anchor offset that hangs the part on the body;
+ * exporting a part on its own passes zero, or minus the part's own anchor to
+ * put the origin *at* the attach point.
+ */
+export function drawOpsForPart(
+  part: Part,
+  cache: FrameCache,
+  options: ComposeOptions,
+  frame: number,
+  offset: { x: number; y: number }
+): DrawOp[] {
+  const action = part.act.actions[actionIndex(part, options)];
+  if (!action || action.motions.length === 0) return [];
+
+  const motion = action.motions[motionIndex(part, options, frame, action.motions.length)];
+  const canvases = cache.get(part) ?? [];
+  const ops: DrawOp[] = [];
+
+  for (const layer of motion.layers) {
+    const canvas = canvases[layer.sprIndex];
+    if (!canvas || layer.color[3] === 0) continue;
+    ops.push({
+      canvas,
+      x: layer.x + offset.x,
+      y: layer.y + offset.y,
+      scaleX: layer.scaleX * (layer.mirror ? -1 : 1),
+      scaleY: layer.scaleY,
+      rotation: layer.rotation,
+      alpha: layer.color[3] / 255,
+      tint: [layer.color[0], layer.color[1], layer.color[2]],
+    });
+  }
+
+  return ops;
+}
+
 function drawOpsForFrame(
   parts: Part[],
   cache: FrameCache,
@@ -188,27 +259,9 @@ function drawOpsForFrame(
   const ops: DrawOp[] = [];
 
   for (const part of [...parts].sort((a, b) => a.zIndex - b.zIndex)) {
-    const action = part.act.actions[actionIndex(part, options)];
-    if (!action || action.motions.length === 0) continue;
-
-    const motion = action.motions[motionIndex(part, options, frame, action.motions.length)];
-    const offset = anchorOffset(part, body, options, frame);
-    const canvases = cache.get(part) ?? [];
-
-    for (const layer of motion.layers) {
-      const canvas = canvases[layer.sprIndex];
-      if (!canvas || layer.color[3] === 0) continue;
-      ops.push({
-        canvas,
-        x: layer.x + offset.x,
-        y: layer.y + offset.y,
-        scaleX: layer.scaleX * (layer.mirror ? -1 : 1),
-        scaleY: layer.scaleY,
-        rotation: layer.rotation,
-        alpha: layer.color[3] / 255,
-        tint: [layer.color[0], layer.color[1], layer.color[2]],
-      });
-    }
+    ops.push(
+      ...drawOpsForPart(part, cache, options, frame, anchorOffset(part, body, options, frame))
+    );
   }
 
   return ops;
@@ -232,38 +285,36 @@ export function firstDrawableAction(part: Part): number {
   return 0;
 }
 
-/** Bounding box of every frame of the action, relative to the character origin. */
-export function actionBounds(parts: Part[], cache: FrameCache, options: ComposeOptions): Rect {
-  const total = frameCount(parts, options);
-  let bounds: Rect | null = null;
-
-  for (let frame = 0; frame < total; frame++) {
-    for (const op of drawOpsForFrame(parts, cache, options, frame)) {
-      // Corners of the transformed quad, which rotation may swing outward.
-      const halfW = (op.canvas.width * Math.abs(op.scaleX)) / 2;
-      const halfH = (op.canvas.height * Math.abs(op.scaleY)) / 2;
-      const rad = (op.rotation * Math.PI) / 180;
-      const cos = Math.abs(Math.cos(rad));
-      const sin = Math.abs(Math.sin(rad));
-      const extentX = halfW * cos + halfH * sin;
-      const extentY = halfW * sin + halfH * cos;
-      const box = {
-        x1: op.x - extentX,
-        y1: op.y - extentY,
-        x2: op.x + extentX,
-        y2: op.y + extentY,
-      };
-      bounds = bounds
-        ? {
-            x1: Math.min(bounds.x1, box.x1),
-            y1: Math.min(bounds.y1, box.y1),
-            x2: Math.max(bounds.x2, box.x2),
-            y2: Math.max(bounds.y2, box.y2),
-          }
-        : box;
-    }
+/** Widens `bounds` to cover every op, which rotation may swing outward. */
+export function growBounds(bounds: Rect | null, ops: DrawOp[]): Rect | null {
+  for (const op of ops) {
+    const halfW = (op.canvas.width * Math.abs(op.scaleX)) / 2;
+    const halfH = (op.canvas.height * Math.abs(op.scaleY)) / 2;
+    const rad = (op.rotation * Math.PI) / 180;
+    const cos = Math.abs(Math.cos(rad));
+    const sin = Math.abs(Math.sin(rad));
+    const extentX = halfW * cos + halfH * sin;
+    const extentY = halfW * sin + halfH * cos;
+    const box = {
+      x1: op.x - extentX,
+      y1: op.y - extentY,
+      x2: op.x + extentX,
+      y2: op.y + extentY,
+    };
+    bounds = bounds
+      ? {
+          x1: Math.min(bounds.x1, box.x1),
+          y1: Math.min(bounds.y1, box.y1),
+          x2: Math.max(bounds.x2, box.x2),
+          y2: Math.max(bounds.y2, box.y2),
+        }
+      : box;
   }
+  return bounds;
+}
 
+/** Rounds a bounds outward to whole pixels; an empty box becomes a 2x2 stub. */
+export function snapBounds(bounds: Rect | null): Rect {
   if (!bounds) return { x1: -1, y1: -1, x2: 1, y2: 1 };
   return {
     x1: Math.floor(bounds.x1),
@@ -271,6 +322,18 @@ export function actionBounds(parts: Part[], cache: FrameCache, options: ComposeO
     x2: Math.ceil(bounds.x2),
     y2: Math.ceil(bounds.y2),
   };
+}
+
+/** Bounding box of every frame of the action, relative to the character origin. */
+export function actionBounds(parts: Part[], cache: FrameCache, options: ComposeOptions): Rect {
+  const total = frameCount(parts, options);
+  let bounds: Rect | null = null;
+
+  for (let frame = 0; frame < total; frame++) {
+    bounds = growBounds(bounds, drawOpsForFrame(parts, cache, options, frame));
+  }
+
+  return snapBounds(bounds);
 }
 
 /**
@@ -287,8 +350,19 @@ export function drawFrame(
   originY: number,
   scale = 1
 ) {
+  paintOps(ctx, drawOpsForFrame(parts, cache, options, frame), originX, originY, scale);
+}
+
+/** Paints draw ops with the character origin at (originX, originY). */
+export function paintOps(
+  ctx: CanvasRenderingContext2D,
+  ops: DrawOp[],
+  originX: number,
+  originY: number,
+  scale = 1
+) {
   ctx.imageSmoothingEnabled = false;
-  for (const op of drawOpsForFrame(parts, cache, options, frame)) {
+  for (const op of ops) {
     ctx.save();
     ctx.globalAlpha = op.alpha;
     ctx.translate(originX + op.x * scale, originY + op.y * scale);

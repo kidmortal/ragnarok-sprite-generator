@@ -65,7 +65,13 @@ h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: v
 
 .meta { text-align: center; color: var(--muted); font-size: 12px; }
 
-.sentinel { height: 1px; }
+/*
+ * Paging sentinel. It must span the row and have real height: the grid centres
+ * its items, so an auto-width sentinel collapses to zero area and an
+ * IntersectionObserver never reports a zero-area target as visible -- which
+ * silently caps every grid at its first page.
+ */
+.sentinel { grid-column: 1 / -1; justify-self: stretch; width: 100%; height: 8px; }
 
 .tabs { display: flex; gap: 4px; }
 .tabs button {
@@ -197,3 +203,91 @@ h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: v
 
 /* Monsters tab has a single picker, so it does not need two columns. */
 .panel.one-column { grid-template-columns: minmax(0, 1fr); }
+
+/* ---- batch export ---- */
+
+.export-tab { padding-top: 16px; }
+
+.export-tab fieldset.picker {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 12px 10px;
+  min-width: 160px;
+}
+
+.export-tab legend { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
+
+.check {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.action-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 12px; }
+
+.attack-pick {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Per-part selection grids: many small tiles rather than a few large ones. */
+.select-grid { display: flex; flex-direction: column; gap: 6px; }
+.select-grid header { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.select-grid header .filter { padding: 4px 8px; font-size: 12px; }
+
+.section-summary {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.section-summary:disabled { cursor: default; }
+.section-summary em { color: var(--text); font-style: normal; text-transform: none; }
+.section-summary .caret { color: var(--accent); }
+
+.tile-grid.small {
+  grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
+  max-height: 260px;
+}
+.tile-grid.small .tile { width: 52px; height: 66px; }
+.tile-grid.small .tile-preview { max-width: 48px; }
+.tile-grid.small .tile-name { font-size: 9px; }
+
+.linkish {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--accent);
+  cursor: pointer;
+  font: inherit;
+  text-decoration: underline;
+}
+
+.progress {
+  height: 6px;
+  border-radius: 3px;
+  background: #0c0f16;
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+
+.progress-fill { height: 100%; background: var(--accent); transition: width .12s linear; }
+
+.failures { color: var(--muted); font-size: 12px; }
+.failures ul { margin: 6px 0 0; padding-left: 18px; }
+.failures li { word-break: break-all; }
