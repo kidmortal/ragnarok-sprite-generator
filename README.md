@@ -9,9 +9,9 @@ Everything runs on your machine: a small Node server reads your extracted sprite
 folder, and the React app parses the `.spr`/`.act` files and composes them in the
 browser.
 
-<!-- TODO: add a screenshot of the Character tab here -->
 
-![Dashboard screenshot](docs/screenshot.png)
+<img width="1235" height="897" alt="image" src="https://github.com/user-attachments/assets/439a5cc4-7e64-4371-a033-3cc5a344b626" />
+
 
 ## What it does
 
