@@ -84,6 +84,7 @@ export async function exportPart(
 
   // Monsters compose as a standalone sprite, so they render on the body's
   // terms: origin at the character origin, no attach point.
+  const monster = options.kind === "monster";
   const kind: PartKind = options.kind === "monster" ? "body" : options.kind;
   const part: Part = {
     kind,
@@ -98,7 +99,10 @@ export async function exportPart(
     cache,
     options.specs,
     options.direction,
-    options.headDirection
+    options.headDirection,
+    // A monster renders as a body but nothing ever attaches to it, so it ships
+    // without the anchor table a real body owes its heads.
+    !monster
   );
 
   const packed = await encodeSpritesheet(sheet.frames, sheet.columns);

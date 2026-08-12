@@ -109,7 +109,14 @@ export function renderPartSheet(
   cache: FrameCache,
   specs: readonly SheetActionSpec[],
   direction: number,
-  headDirection: number
+  headDirection: number,
+  /**
+   * Whether to ship the per-frame attach table. True for a real body, whose
+   * anchors are what heads and headgears hang off; false for a monster, which
+   * renders on a body's terms but wears nothing, so an anchor table would be
+   * a few hundred numbers per sheet that nothing can ever read.
+   */
+  emitAnchors = part.kind === "body"
 ): PartSheet {
   const parented = isParented(part.kind);
   const plans: ActionPlan[] = [];
@@ -158,7 +165,7 @@ export function renderPartSheet(
       start: sheet.frames.length,
       count: plan.frames.length,
       frameDelayMs: plan.frameDelayMs,
-      ...(part.kind === "body" ? { anchors: plan.anchors } : {}),
+      ...(emitAnchors ? { anchors: plan.anchors } : {}),
     };
 
     for (const ops of plan.frames) {

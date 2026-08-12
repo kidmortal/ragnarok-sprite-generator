@@ -56,6 +56,27 @@ const DEFAULT_ACTIONS = ["stand", "idle", "walk", "hurt", "dead", "skill"];
  */
 const ATTACK_VARIANTS = ["attack", "attack2", "attack3"] as const;
 
+/**
+ * What a monster is exported with by default.
+ *
+ * A monster is a standalone sprite that wears nothing and walks nowhere on our
+ * battlefield: it stands, it swings, it flinches and it dies. `move` is offered
+ * because the sprite has it, but nothing in the game plays it yet, and an
+ * action nobody plays is pure archive weight.
+ */
+const DEFAULT_MONSTER_ACTIONS = ["stand", "attack", "hurt", "dead"];
+
+/**
+ * Monsters face **south-west** unless told otherwise, while players are
+ * exported facing south.
+ *
+ * They are not the same choice and must not share one control: the party
+ * stands on the left of the battlefield facing right, so a monster on the right
+ * reads as facing them only at three-quarters. South is what a player wants -
+ * a character screen looks at you - and south-west is what an opponent wants.
+ */
+const MONSTER_DIRECTION = 1;
+
 const isAttack = (slug: string): boolean =>
   (ATTACK_VARIANTS as readonly string[]).includes(slug);
 
@@ -127,6 +148,8 @@ export function ExportTab() {
 
   const [monsters, setMonsters] = useState<PartEntry[] | null>(null);
   const [pickedMonsters, setPickedMonsters] = useState<Set<string>>(new Set());
+  const [monsterActions, setMonsterActions] = useState<string[]>(DEFAULT_MONSTER_ACTIONS);
+  const [monsterDirection, setMonsterDirection] = useState(MONSTER_DIRECTION);
 
   const [actions, setActions] = useState<string[]>(DEFAULT_ACTIONS);
   const [attackVariant, setAttackVariant] = useState<string>("attack");
@@ -151,6 +174,11 @@ export function ExportTab() {
       return actions.includes(spec.slug) ? [spec] : [];
     });
   }, [actions, attackVariant]);
+
+  const monsterSpecs = useMemo<SheetActionSpec[]>(
+    () => MONSTER_SHEET_ACTIONS.filter((spec) => monsterActions.includes(spec.slug)),
+    [monsterActions]
+  );
 
   // Bodies, heads and headgears are all race/gender-scoped, so they reload
   // together and any selection made against the old catalogue is dropped.
@@ -299,6 +327,9 @@ export function ExportTab() {
         return;
       }
 
+      const anyMonsters = pending.some((job) => job.kind === "monster");
+      const anyPlayerParts = pending.some((job) => job.kind !== "monster");
+
       const zip = new ZipBuilder();
       const manifestEntries: PartMeta[] = [];
       const failed: string[] = [];
@@ -308,10 +339,14 @@ export function ExportTab() {
 
       await mapWithConcurrency(pending, MAX_PARALLEL, async (job) => {
         try {
+          // A monster is exported on its own terms: its own action list, and
+          // its own facing. Sharing the player's controls would point every
+          // opponent at the camera and ship it with a walk cycle nothing plays.
+          const monster = job.kind === "monster";
           const options: ExportOptions = {
             kind: job.kind,
-            specs: job.kind === "monster" ? MONSTER_SHEET_ACTIONS : specs,
-            direction,
+            specs: monster ? monsterSpecs : specs,
+            direction: monster ? monsterDirection : direction,
             headDirection,
             ...(job.race ? { race: job.race } : {}),
             ...(job.gender ? { gender: job.gender } : {}),
@@ -331,15 +366,26 @@ export function ExportTab() {
       await zip.add(
         "manifest.json",
         JSON.stringify(
-          buildManifest(manifestEntries, specs, direction, headDirection, base),
+          buildManifest(
+            manifestEntries,
+            // Both lists: the manifest's `actions` is what the archive
+            // contains, and a monsters-only run contains monster actions.
+            [...(anyPlayerParts ? specs : []), ...(anyMonsters ? monsterSpecs : [])],
+            direction,
+            headDirection,
+            base
+          ),
           null,
           2
         )
       );
 
       const blob = zip.build();
-      const stem = body ? `ro-${equipment?.job ?? body.name}` : "ro-parts";
-      download(blob, `${stem}-${DIRECTIONS[direction].toLowerCase()}.zip`);
+      const stem = anyPlayerParts
+        ? `ro-${equipment?.job ?? body?.name ?? "parts"}`
+        : "ro-monsters";
+      const facing = DIRECTIONS[anyPlayerParts ? direction : monsterDirection];
+      download(blob, `${stem}-${facing.toLowerCase()}.zip`);
 
       setProgress(null);
       setFailures(failed);
@@ -355,6 +401,13 @@ export function ExportTab() {
   }
 
   const busy = progress !== null;
+
+  // Each half of a run needs its own actions ticked, and only the half that is
+  // actually being exported: a monsters-only run is not held up by the player
+  // action list being empty.
+  const hasActions = jobs.every((job) =>
+    job.kind === "monster" ? monsterSpecs.length > 0 : specs.length > 0
+  );
 
   return (
     <div className="export-tab">
@@ -446,6 +499,59 @@ export function ExportTab() {
             empty={monsters ? "No monsters found." : "Loading…"}
             hint="Standalone sprites — not tied to the body above."
           />
+
+          <div className="row">
+            <fieldset className="picker">
+              <legend>Monster actions</legend>
+              <div className="action-grid">
+                {MONSTER_SHEET_ACTIONS.map((spec) => (
+                  <label key={spec.slug} className="check">
+                    <input
+                      type="checkbox"
+                      checked={monsterActions.includes(spec.slug)}
+                      disabled={busy}
+                      onChange={() =>
+                        setMonsterActions((prev) =>
+                          prev.includes(spec.slug)
+                            ? prev.filter((slug) => slug !== spec.slug)
+                            : [...prev, spec.slug]
+                        )
+                      }
+                    />
+                    {spec.slug}
+                  </label>
+                ))}
+              </div>
+              <p className="meta">
+                A monster wears nothing and walks nowhere in a turn-based fight, so the four
+                default poses are the whole of what it needs: <code>stand</code>,{" "}
+                <code>attack</code>, <code>hurt</code> and <code>dead</code>.
+              </p>
+            </fieldset>
+
+            <fieldset className="picker">
+              <legend>Monster facing</legend>
+              <label>
+                Facing
+                <select
+                  value={monsterDirection}
+                  disabled={busy}
+                  onChange={(e) => setMonsterDirection(Number(e.target.value))}
+                >
+                  {DIRECTIONS.map((name, i) => (
+                    <option key={name} value={i}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <p className="meta">
+                Separate from the body facing above. South-west is the default because an
+                opponent faces the party across the field, where a player is exported facing the
+                camera.
+              </p>
+            </fieldset>
+          </div>
         </details>
 
         <div className="row">
@@ -572,7 +678,7 @@ export function ExportTab() {
         </p>
 
         <div className="controls">
-          <button onClick={run} disabled={busy || jobs.length === 0 || specs.length === 0}>
+          <button onClick={run} disabled={busy || jobs.length === 0 || !hasActions}>
             {busy ? "Exporting…" : `Export ${jobs.length} part${jobs.length === 1 ? "" : "s"}`}
           </button>
         </div>

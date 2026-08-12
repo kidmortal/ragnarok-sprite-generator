@@ -32,6 +32,10 @@ browser.
 - One PNG per part plus a single `manifest.json` carrying every part's metadata inline.
 - This is the path that feeds a game engine that composes characters at **runtime** — one
   sheet per body and one per head, rather than one per combination. See `PLAN.md`.
+- **Monsters are exported on their own terms**, in the same run and the same manifest: their own
+  four actions (`stand`, `attack`, `hurt`, `dead`) and their own facing, **south-west** by
+  default. They wear nothing, so they ship without the per-frame anchor table a body owes its
+  heads — one sheet is the whole monster, and an engine plays it as an ordinary spritesheet.
 
 **Monsters tab** — the same preview and exports for any of the ~986 sprites in
 `몬스터/`. Monsters are standalone sprites with no head, equipment or attach

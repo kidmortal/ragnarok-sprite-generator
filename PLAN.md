@@ -303,9 +303,26 @@ field threaded through the user, party and battle payloads.
 `prisma/seed-sprite-parts.ts`, and appearance included in `user:get`, `party:roster` and the battle
 snapshot.
 
+### Monsters
+
+Monsters ride the same format, and needed no change to it. A monster renders on a body's terms -
+origin at the character origin, nothing parented - so the only differences are the ones the
+content dictates:
+
+- its own action list, RO's `MonsterAction` (`stand`, `move`, `attack`, `hurt`, `dead`), of which
+  the export ships four by default: nothing walks in a turn-based fight;
+- its own facing, **south-west** by default, because an opponent faces the party across the field
+  where a player faces the camera;
+- **no anchor table**. A body emits one because heads hang off it; a monster wears nothing, so
+  `renderPartSheet` is told not to, and a few hundred numbers per sheet stay out of the manifest.
+
+On the game side there is no compositor involved at all: one sheet already holds every action, so
+`objects/monsters/exportedMonster.ts` names the frame ranges as animations and hands the sheet to a
+plain `Sprite`. `stand` becomes `idle`, `hurt` becomes `damage`, `dead` becomes `death`.
+
 ### Left undone
 
-- Only **South** is exported. The format already carries a `direction` field, so more facings are
+- Only **South** is exported for players (monsters default to south-west). The format already carries a `direction` field, so more facings are
   another axis in the sheet rather than a redesign.
 - Only the **Straight** head slice is baked for stand/sit; Left and Right would be extra animations.
 - Headgear slots 2 and 3 are stored and composed but the customisation page only exposes the first.
