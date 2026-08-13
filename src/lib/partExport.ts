@@ -1,6 +1,6 @@
 /**
  * Turns one catalogue entry into the pair of files a game engine consumes: a
- * uniform-grid PNG and the JSON that says how to read it.
+ * uniform-grid, lossless WebP sheet and the JSON that says how to read it.
  *
  * The contract is documented in `PLAN.md`. In short: every sheet declares an
  * origin pixel, and what that pixel *means* is the whole runtime API --
@@ -9,14 +9,14 @@
  */
 
 import { fetchFile, type PartEntry } from "../api";
-import { encodeSpritesheet } from "./apng";
+import { SHEET_EXTENSION, encodeSpritesheet } from "./apng";
 import { Z_INDEX, buildFrameCache, type Part, type PartKind } from "./compose";
 import { renderPartSheet, type SheetAction, type SheetActionSpec } from "./partSheet";
 import { parseAct } from "./act";
 import { parseSpr } from "./spr";
 
 /**
- * Everything an engine needs to read one part's PNG.
+ * Everything an engine needs to read one part's sheet.
  *
  * This lives inline in `manifest.json` rather than in a file per part: a
  * runtime character builder wants one fetch, not one per sprite, and the whole
@@ -49,7 +49,8 @@ export type PartMeta = {
 
 export type ExportedPart = {
   meta: PartMeta;
-  png: Blob;
+  /** The packed sheet, lossless WebP — `meta.image` is where it belongs. */
+  image: Blob;
 };
 
 /**
@@ -75,7 +76,7 @@ export type ExportOptions = {
   job?: string;
 };
 
-/** Fetches, parses and renders one part into its PNG and its metadata. */
+/** Fetches, parses and renders one part into its sheet and its metadata. */
 export async function exportPart(
   entry: PartEntry,
   options: ExportOptions
@@ -107,10 +108,10 @@ export async function exportPart(
 
   const packed = await encodeSpritesheet(sheet.frames, sheet.columns);
   const key = await partKey(options.kind, entry.sprId);
-  const image = `${options.kind}/${key}.png`;
+  const image = `${options.kind}/${key}.${SHEET_EXTENSION}`;
 
   return {
-    png: packed.blob,
+    image: packed.blob,
     meta: {
       key,
       kind: options.kind,
@@ -160,7 +161,7 @@ export function buildManifest(
   /**
    * A manifest from an earlier run to fold this one into. This is what makes
    * the export incremental: ship a few hundred parts today, a few hundred more
-   * next week, and drop the new PNGs plus the merged manifest into the same
+   * next week, and drop the new sheets plus the merged manifest into the same
    * folder without re-rendering anything already there.
    */
   base?: Manifest | null

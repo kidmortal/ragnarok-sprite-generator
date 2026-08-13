@@ -99,12 +99,12 @@ Two special cases to carry over verbatim from `motionIndex()`:
 ```
 export/
   manifest.json        every part's metadata, inline
-  body/<key>.png
-  head/<key>.png
-  weapon/<key>.png     shield/…  garment/…  headgear/…  monster/…
+  body/<key>.webp
+  head/<key>.webp
+  weapon/<key>.webp     shield/…  garment/…  headgear/…  monster/…
 ```
 
-> **Changed from the original plan.** This started out as a JSON file *per part*, next to each PNG.
+> **Changed from the original plan.** This started out as a JSON file *per part*, next to each sheet.
 > It ships as one `manifest.json` with the metadata inline instead: a runtime character builder
 > wants one fetch, not one per sprite, and the whole table for a few hundred parts is a few hundred
 > KB before compression. The per-part JSON would also have duplicated the manifest almost exactly.
@@ -127,7 +127,7 @@ so decoding them to a string would be lossy.
   "kind": "body",
   "label": "하이프리 여",          // original sprite name, for your UI
   "source": "7J247rCE7KGxLy4uLg",   // base64url of the raw path bytes
-  "image": "body/body_3f2a91c4.png",
+  "image": "body/body_3f2a91c4.webp",
   "cell": { "w": 118, "h": 142 },  // uniform grid cell
   "origin": [59, 108],             // see "coordinate contract" above
   "columns": 12,
@@ -200,10 +200,10 @@ returns the cell size, the origin pixel and the per-action `start` / `count` / `
 `anchors`.
 
 `src/lib/zip.ts` is a store-only ZIP writer, reusing `crc32` from `apng.ts` rather than carrying a
-second copy of the table. Store rather than deflate because PNGs are already compressed. Bit 11 is
+second copy of the table. Store rather than deflate because the WebP sheets are already compressed. Bit 11 is
 set so the Korean names survive.
 
-`src/lib/partExport.ts` turns one catalogue entry into its PNG and its manifest row;
+`src/lib/partExport.ts` turns one catalogue entry into its WebP sheet and its manifest row;
 `src/components/ExportTab.tsx` is the UI — kind, race, gender and action selection, a
 concurrency-capped queue, a progress bar, and a failure list so one unreadable sprite cannot sink a
 long export. Equipment is walked per body (it is job-scoped) and deduped by source file, since many

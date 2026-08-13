@@ -75,7 +75,7 @@ Each sheet declares an `origin` pixel, and what that pixel *means* is the whole 
 character origin for an unparented part, the attach point for a head or headgear.
 
 `src/lib/zip.ts` is a store-only zip writer, because a few hundred browser downloads is not a
-usable export and the PNGs are already compressed. It reuses `crc32` from the APNG encoder.
+usable export and the WebP sheets are already compressed. It reuses `crc32` from the APNG encoder.
 
 ## Previews in the pickers
 

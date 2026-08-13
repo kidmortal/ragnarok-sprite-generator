@@ -29,7 +29,7 @@ browser.
 
 - Pick which kinds to emit (bodies, heads, headgears, weapons, shields, garments, monsters),
   which races and genders, and which actions.
-- One PNG per part plus a single `manifest.json` carrying every part's metadata inline.
+- One lossless WebP sheet per part plus a single `manifest.json` carrying every part's metadata inline.
 - This is the path that feeds a game engine that composes characters at **runtime** — one
   sheet per body and one per head, rather than one per combination. See `PLAN.md`.
 - **Monsters are exported on their own terms**, in the same run and the same manifest: their own

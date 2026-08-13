@@ -133,6 +133,7 @@ export async function encodeApng(
 }
 
 export type Sheet = {
+  /** Lossless WebP. See `encodeSpritesheet`. */
   blob: Blob;
   columns: number;
   rows: number;
@@ -140,7 +141,19 @@ export type Sheet = {
   frameHeight: number;
 };
 
-/** Pack frames into a grid spritesheet. */
+/** The file extension every packed sheet is written under. */
+export const SHEET_EXTENSION = "webp";
+
+/**
+ * Pack frames into a grid spritesheet, as lossless WebP.
+ *
+ * Lossless is not negotiable: these are pixel sprites with hard alpha edges,
+ * and a lossy pass smears both. `toBlob` with quality exactly 1 is what asks
+ * the browser's WebP encoder for its lossless mode — anything less is
+ * generational loss on art that gets re-exported. The sheets come out around a
+ * fifth of the PNG they replace, which is the whole point: a game client loads
+ * a few hundred of these on boot.
+ */
 export async function encodeSpritesheet(
   canvases: HTMLCanvasElement[],
   columns = canvases.length
@@ -162,8 +175,18 @@ export async function encodeSpritesheet(
   });
 
   const blob = await new Promise<Blob>((resolve, reject) =>
-    sheet.toBlob((b) => (b ? resolve(b) : reject(new Error("canvas encoding failed"))), "image/png")
+    sheet.toBlob(
+      (b) => (b ? resolve(b) : reject(new Error("canvas encoding failed"))),
+      "image/webp",
+      1 // lossless
+    )
   );
+
+  // A browser that cannot encode WebP silently hands back a PNG instead, and
+  // an export full of PNGs named `.webp` is a subtle mess to unpick later.
+  if (blob.type !== "image/webp") {
+    throw new Error(`this browser cannot encode WebP (got ${blob.type || "no type"})`);
+  }
 
   return { blob, columns: cols, rows, frameWidth, frameHeight };
 }

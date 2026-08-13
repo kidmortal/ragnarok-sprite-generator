@@ -353,7 +353,7 @@ export function ExportTab() {
             ...(job.job ? { job: job.job } : {}),
           };
           const result = await exportPart(job.entry, options);
-          await zip.add(result.meta.image, result.png);
+          await zip.add(result.meta.image, result.image);
           manifestEntries.push(result.meta);
         } catch (err) {
           // One unreadable sprite must not sink a long export.

@@ -7,7 +7,7 @@ import {
   type ComposeOptions,
   type Part,
 } from "../lib/compose";
-import { download, encodeApng, encodeSpritesheet } from "../lib/apng";
+import { SHEET_EXTENSION, download, encodeApng, encodeSpritesheet } from "../lib/apng";
 
 type Props = {
   parts: Part[];
@@ -108,7 +108,7 @@ export function Stage({
     try {
       const { frames, delay } = renderAction(parts, cache, options, zoom);
       const sheet = await encodeSpritesheet(frames);
-      download(sheet.blob, `${fileName}_sheet.png`);
+      download(sheet.blob, `${fileName}_sheet.${SHEET_EXTENSION}`);
 
       const meta = {
         name: fileName,
