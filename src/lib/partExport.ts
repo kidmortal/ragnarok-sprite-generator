@@ -153,6 +153,36 @@ export function manifestKeys(manifest: Manifest | null | undefined): Set<string>
   return keys;
 }
 
+/**
+ * The manifest as it is written to the zip: one part per line, each part itself
+ * compact.
+ *
+ * `JSON.stringify(manifest, null, 2)` spread 193 parts over 23,000 lines and
+ * three times the bytes, for indentation nobody reads — the anchor tables alone
+ * are thousands of two-number arrays. Compact throughout would be one 158 KB
+ * line, which is smaller still but turns every re-export into a diff of the
+ * whole file.
+ *
+ * A line per part is the middle: the same size as fully compact to within a few
+ * hundred bytes, and a re-export of one sprite shows up as one changed line.
+ * Going further — a binary or packed encoding — buys nothing worth having: the
+ * file is served compressed, and gzip already takes this shape to under 9 KB.
+ */
+export function stringifyManifest(manifest: Manifest): string {
+  const { parts, ...head } = manifest;
+
+  const kinds = Object.entries(parts).map(([kind, list]) => {
+    const rows = list.map((part) => `    ${JSON.stringify(part)}`).join(",\n");
+    return `  ${JSON.stringify(kind)}: [\n${rows}\n  ]`;
+  });
+
+  const fields = Object.entries(head).map(
+    ([name, value]) => `  ${JSON.stringify(name)}: ${JSON.stringify(value)}`
+  );
+
+  return `{\n${fields.join(",\n")},\n  "parts": {\n${kinds.join(",\n")}\n  }\n}\n`;
+}
+
 export function buildManifest(
   entries: PartMeta[],
   specs: readonly SheetActionSpec[],

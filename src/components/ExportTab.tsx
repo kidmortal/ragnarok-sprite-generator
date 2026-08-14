@@ -13,6 +13,7 @@ import {
   exportPart,
   manifestKeys,
   partKey,
+  stringifyManifest,
   type ExportOptions,
   type Manifest,
   type PartMeta,
@@ -365,7 +366,7 @@ export function ExportTab() {
 
       await zip.add(
         "manifest.json",
-        JSON.stringify(
+        stringifyManifest(
           buildManifest(
             manifestEntries,
             // Both lists: the manifest's `actions` is what the archive
@@ -374,9 +375,7 @@ export function ExportTab() {
             direction,
             headDirection,
             base
-          ),
-          null,
-          2
+          )
         )
       );
 

@@ -77,6 +77,50 @@ character origin for an unparented part, the attach point for a head or headgear
 `src/lib/zip.ts` is a store-only zip writer, because a few hundred browser downloads is not a
 usable export and the WebP sheets are already compressed. It reuses `crc32` from the APNG encoder.
 
+## Why the sheets are small
+
+**The encoder is not the browser's.** `canvas.toBlob(…, "image/webp", 1)` selects lossless and then
+gives you no say over the *effort* behind it — the search libwebp does for predictors, transforms
+and entropy codings, which costs only time and changes only size. Chromium's answer to that moved
+between two builds, and the same sprites came out 3.8x heavier: 70 sheets libwebp packs into 564 KB
+were shipped at 2139 KB, with no flag anywhere to ask for the good one. So `encodeSpritesheet` posts
+the packed pixels to `POST /api/encode` and libwebp is asked directly, at full effort. Over the whole
+current export: **2627 KB → 1034 KB**, and the bytes are now a function of the art rather than of
+whichever browser somebody exported from.
+
+**The palette transform is worth keeping too.** A lossless WebP of RO art leans on storing the sheet
+as palette indices (`color-indexing`), which the encoder can only reach for while the sheet stays
+inside 256 colours. Rendering is what pushes it out: a frame the `.act` rotates goes through
+`ctx.rotate`, and `imageSmoothingEnabled = false` does not stop a canvas anti-aliasing the *edges*
+of what it rotates, so a couple of frames drag thousands of blended half-colours in with them.
+
+`src/lib/quantise.ts` runs over the packed sheet before it is encoded and puts those strays back on
+the palette the art was drawn in. It reads the histogram rather than the pixels: an alpha level that
+covers a real share of the drawn pixels was authored and is kept, while the long tail of levels is
+anti-aliasing and snaps to on or off; a colour that is rare *and* sits right on top of a much
+commoner one is a rounding artifact and folds into it, while a rare colour that is nobody's
+neighbour is left alone. Only a sheet still over 256 afterwards has colours forced together, and
+only its rarest ones.
+
+It is worth about 2% of the set on its own — small next to the encoder — but it is what keeps eight
+sheets from losing the palette transform entirely, and for pixel art it sharpens rather than
+degrades: the blended pixels are the artifact. Measured against the real sprites, bodies, heads,
+weapons, headgears and monsters come through with **zero** authored pixels altered; the worst case,
+a 233-colour butterfly cape, moves 0.4% of its pixels by at most 17 levels because it genuinely
+overflows 256 and something has to give.
+
+## The manifest's shape on disk
+
+`stringifyManifest` writes one part per line, each part itself compact. Pretty-printing spread 193
+parts over 23,000 lines and three times the bytes — the anchor tables alone are thousands of
+two-number arrays — while fully compact would be one 158 KB line that re-diffs entirely on every
+re-export. A line per part costs about a kilobyte over compact and keeps a one-sprite re-export to
+one changed line.
+
+There is no case for a binary or packed format underneath that. The file is served compressed, and
+gzip takes it to **8.8 KB** either way; a hand-rolled encoding would save a few kilobytes on the
+wire in exchange for a decoder on both sides and a manifest nobody can read in a text editor.
+
 ## Previews in the pickers
 
 A headgear folder holds well over a thousand entries and `몬스터/` nearly a
@@ -99,6 +143,7 @@ onwards.
 | `GET /api/monsters` | Every `.spr`/`.act` pair in `몬스터/` |
 | `GET /api/parts?race=human\|doram&gender=male\|female` | Body, head and headgear lists, each pairing a `.spr` with its `.act` |
 | `GET /api/equipment?race&gender&body=<body sprite name>` | Weapon, shield and garment lists for that body's job |
+| `POST /api/encode?w&h` | A packed sheet as raw RGBA in, lossless WebP out |
 
 Ids are base64url of the raw relative path bytes, which is what makes
 non-UTF-8 names addressable. Every request is checked to stay inside the data

@@ -1,4 +1,5 @@
 import express from "express";
+import sharp from "sharp";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -267,6 +268,59 @@ app.get("/api/equipment", async (req, res) => {
 
   res.json({ job, weaponFolder, weapons, shields, garments });
 });
+
+/**
+ * Encodes a packed sheet, because the browser will not do it properly.
+ *
+ * `canvas.toBlob(…, "image/webp", 1)` selects lossless and then gives you no
+ * say in the *effort* behind it — the search libwebp does for predictors,
+ * transforms and entropy codings, which costs only time and changes only size.
+ * Chromium's answer to that moved between two builds and the same sprites came
+ * out 3.8x heavier: 70 sheets that libwebp packs into 564 KB were shipped at
+ * 2139 KB. There is no flag to ask for the good one.
+ *
+ * So the canvas is sent here as raw RGBA and libwebp is asked directly, at the
+ * top effort it has. Slower per sheet, and worth it several times over: the
+ * bytes are now a function of the art rather than of whichever browser somebody
+ * happened to export from.
+ *
+ * Body is the pixels themselves; `w` and `h` describe them. Raw rather than a
+ * PNG the browser encodes first, because that would be the same trade again —
+ * an encoder we do not control, in the way of one we do.
+ */
+app.post(
+  "/api/encode",
+  express.raw({ type: "application/octet-stream", limit: "256mb" }),
+  async (req, res) => {
+    const width = Number(req.query.w);
+    const height = Number(req.query.h);
+    const pixels = req.body as Buffer;
+
+    if (!Number.isInteger(width) || !Number.isInteger(height) || width < 1 || height < 1) {
+      return res.status(400).json({ error: "w and h must be positive integers" });
+    }
+    if (!Buffer.isBuffer(pixels) || pixels.length !== width * height * 4) {
+      return res.status(400).json({
+        error: `expected ${width * height * 4} bytes of RGBA, got ${pixels?.length ?? 0}`,
+      });
+    }
+
+    try {
+      const webp = await sharp(pixels, { raw: { width, height, channels: 4 } })
+        // `effort` is the whole point of this route; `exact` keeps the colour of
+        // fully transparent pixels rather than letting the encoder pick
+        // whatever compresses best there, so a sheet stays byte-stable across
+        // re-exports.
+        .webp({ lossless: true, effort: 6, exact: true })
+        .toBuffer();
+
+      res.setHeader("Content-Type", "image/webp");
+      res.send(webp);
+    } catch (err) {
+      res.status(500).json({ error: (err as Error).message });
+    }
+  }
+);
 
 /** Monster sprites are standalone `.spr`/`.act` pairs in `몬스터/`. */
 app.get("/api/monsters", async (_req, res) => {

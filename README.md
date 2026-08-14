@@ -6,8 +6,9 @@ just pick a monster — watch it animate, and export it as an **animated PNG** o
 a **spritesheet**.
 
 Everything runs on your machine: a small Node server reads your extracted sprite
-folder, and the React app parses the `.spr`/`.act` files and composes them in the
-browser.
+folder and encodes the finished sheets, and the React app parses the `.spr`/`.act`
+files and composes them in the browser. Both halves have to be running to export —
+`npm run dev` starts them together.
 
 
 <img width="1235" height="897" alt="image" src="https://github.com/user-attachments/assets/439a5cc4-7e64-4371-a033-3cc5a344b626" />
@@ -30,6 +31,10 @@ browser.
 - Pick which kinds to emit (bodies, heads, headgears, weapons, shields, garments, monsters),
   which races and genders, and which actions.
 - One lossless WebP sheet per part plus a single `manifest.json` carrying every part's metadata inline.
+  Sheets are encoded by libwebp on the server rather than by `canvas.toBlob`, which selects lossless
+  but not how hard to work at it — the same sprites came out 3.8x heavier from one browser build than
+  the next. Each sheet is also snapped back onto the palette its art was drawn in, so anti-aliasing
+  from a rotated frame cannot cost the encoder its palette transform. Both in `docs/how-it-works.md`.
 - This is the path that feeds a game engine that composes characters at **runtime** — one
   sheet per body and one per head, rather than one per combination. See `PLAN.md`.
 - **Monsters are exported on their own terms**, in the same run and the same manifest: their own

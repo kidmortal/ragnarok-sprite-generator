@@ -8,6 +8,8 @@
  * dispose=background/blend=source, so no inter-frame math is needed.
  */
 
+import { quantiseSheet } from "./quantise";
+
 const SIGNATURE = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
 const crcTable = (() => {
@@ -145,14 +147,57 @@ export type Sheet = {
 export const SHEET_EXTENSION = "webp";
 
 /**
+ * Hands a sheet's pixels to libwebp, on the server, for a lossless encode.
+ *
+ * Not `canvas.toBlob`: quality 1 selects lossless there but says nothing about
+ * the *effort* behind it, Chromium's answer to that changed between two builds,
+ * and the same sprites came out 3.8x heavier — 2139 KB of sheets that libwebp
+ * packs into 564 KB. `/api/encode` is the same server the sprites are read
+ * from, so this adds no dependency the export did not already have, and the
+ * bytes stop depending on which browser somebody exported from.
+ */
+async function encodeLossless(
+  pixels: Uint8ClampedArray,
+  width: number,
+  height: number
+): Promise<Blob> {
+  const response = await fetch(`/api/encode?w=${width}&h=${height}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/octet-stream" },
+    // A view, not a copy: the buffer is the sheet, and a sheet is megabytes.
+    // The cast is only about `ArrayBufferLike` vs `ArrayBuffer` — canvas pixels
+    // are never backed by a SharedArrayBuffer.
+    body: new Uint8Array(pixels.buffer as ArrayBuffer, pixels.byteOffset, pixels.length),
+  });
+
+  if (!response.ok) {
+    const detail = await response.text().catch(() => "");
+    throw new Error(`sheet encoding failed (${response.status}) ${detail}`.trim());
+  }
+
+  const blob = await response.blob();
+  // Cheap insurance against a proxy or a dev server answering with an error
+  // page: an export full of HTML named `.webp` is a subtle mess to unpick.
+  if (blob.type !== "image/webp") {
+    throw new Error(`sheet encoding returned ${blob.type || "no type"}, not WebP`);
+  }
+
+  return blob;
+}
+
+/**
  * Pack frames into a grid spritesheet, as lossless WebP.
  *
  * Lossless is not negotiable: these are pixel sprites with hard alpha edges,
- * and a lossy pass smears both. `toBlob` with quality exactly 1 is what asks
- * the browser's WebP encoder for its lossless mode — anything less is
- * generational loss on art that gets re-exported. The sheets come out around a
- * fifth of the PNG they replace, which is the whole point: a game client loads
- * a few hundred of these on boot.
+ * and a lossy pass smears both. The sheets come out around a fifth of the PNG
+ * they replace, which is the whole point: a game client loads a few hundred of
+ * these on boot.
+ *
+ * `quantiseSheet` runs first, putting the half-colours a rotated frame picks up
+ * back on the sprite's own palette. Worth about 2% of the set on its own — the
+ * encoder is where the size really lives — but it is what keeps a sheet inside
+ * the 256 colours WebP's palette transform needs, and it sharpens edges that
+ * anti-aliasing softened. See its file.
  */
 export async function encodeSpritesheet(
   canvases: HTMLCanvasElement[],
@@ -168,25 +213,20 @@ export async function encodeSpritesheet(
   const sheet = document.createElement("canvas");
   sheet.width = frameWidth * cols;
   sheet.height = frameHeight * rows;
-  const ctx = sheet.getContext("2d")!;
+  // The sheet is read back a frame later to be quantised, which is exactly the
+  // pattern this hint exists for.
+  const ctx = sheet.getContext("2d", { willReadFrequently: true })!;
   ctx.imageSmoothingEnabled = false;
   canvases.forEach((canvas, i) => {
     ctx.drawImage(canvas, (i % cols) * frameWidth, Math.floor(i / cols) * frameHeight);
   });
 
-  const blob = await new Promise<Blob>((resolve, reject) =>
-    sheet.toBlob(
-      (b) => (b ? resolve(b) : reject(new Error("canvas encoding failed"))),
-      "image/webp",
-      1 // lossless
-    )
-  );
+  // The pixels leave for the encoder from here rather than from the canvas, so
+  // there is nothing to write back: the canvas has no reader after this point.
+  const image = ctx.getImageData(0, 0, sheet.width, sheet.height);
+  quantiseSheet(image.data);
 
-  // A browser that cannot encode WebP silently hands back a PNG instead, and
-  // an export full of PNGs named `.webp` is a subtle mess to unpick later.
-  if (blob.type !== "image/webp") {
-    throw new Error(`this browser cannot encode WebP (got ${blob.type || "no type"})`);
-  }
+  const blob = await encodeLossless(image.data, sheet.width, sheet.height);
 
   return { blob, columns: cols, rows, frameWidth, frameHeight };
 }
