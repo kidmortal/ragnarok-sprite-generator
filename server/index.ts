@@ -322,6 +322,51 @@ app.post(
   }
 );
 
+/**
+ * The other half of `/api/encode`: an encoded image back out as raw RGBA.
+ *
+ * `/api/encode` was enough while everything that came here started life as a
+ * canvas. It stopped being enough the moment art already shipped as WebP needed
+ * resizing — a consumer that can only encode has to decode with something else,
+ * and the something else is either a second image library or a hand-rolled
+ * decoder that handles exactly the subset of formats it has met so far.
+ * (Ilumnia's icon script carries such a decoder for PNG, which is why it could
+ * not touch the WebP icons it had itself produced.)
+ *
+ * So the bytes come in whole and go out flattened: RGBA, one channel order, no
+ * palette, no interlacing, no format left to know about. The dimensions travel
+ * in the headers rather than the body, because the caller usually does not know
+ * them until it asks.
+ */
+app.post(
+  "/api/decode",
+  express.raw({ type: "application/octet-stream", limit: "256mb" }),
+  async (req, res) => {
+    const bytes = req.body as Buffer;
+
+    if (!Buffer.isBuffer(bytes) || bytes.length === 0) {
+      return res.status(400).json({ error: "expected image bytes in the body" });
+    }
+
+    try {
+      // `ensureAlpha` so the answer is always 4 channels: an opaque source
+      // would otherwise come back 3-wide and every caller would need the branch
+      // this route exists to remove.
+      const { data, info } = await sharp(bytes)
+        .ensureAlpha()
+        .raw()
+        .toBuffer({ resolveWithObject: true });
+
+      res.setHeader("X-Image-Width", String(info.width));
+      res.setHeader("X-Image-Height", String(info.height));
+      res.setHeader("Content-Type", "application/octet-stream");
+      res.send(data);
+    } catch (err) {
+      res.status(500).json({ error: (err as Error).message });
+    }
+  }
+);
+
 /** Monster sprites are standalone `.spr`/`.act` pairs in `몬스터/`. */
 app.get("/api/monsters", async (_req, res) => {
   res.json(await listParts("몬스터"));
