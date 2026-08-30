@@ -2,62 +2,20 @@ import express from "express";
 import sharp from "sharp";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { foldersForJob } from "./resolver.ts";
+import { listPetsCached } from "./pets.ts";
+import {
+  DATA_DIR,
+  displayName,
+  encodeId,
+  join,
+  resolveId,
+  ROOT,
+  THUMB_DIR,
+} from "./paths.ts";
+import { thumbFile, TILE } from "./thumbnail.ts";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(__dirname, "..");
-const DATA_DIR = path.resolve(ROOT, "data");
 const PORT = Number(process.env.PORT ?? 3001);
-
-/**
- * Paths are addressed by an opaque id: base64url of the raw relative path
- * *bytes*. Folders/files here are often named in Korean, and some archives
- * carry legacy EUC-KR bytes that are not valid UTF-8 -- round-tripping the raw
- * bytes means we can always reopen the file even when its name cannot be
- * decoded losslessly.
- */
-const encodeId = (rel: Buffer) => rel.toString("base64url");
-const decodeId = (id: string) => Buffer.from(id, "base64url");
-
-const utf8 = new TextDecoder("utf-8", { fatal: false });
-let eucKr: TextDecoder | null = null;
-try {
-  eucKr = new TextDecoder("euc-kr", { fatal: true });
-} catch {
-  eucKr = null;
-}
-
-function displayName(raw: Buffer): string {
-  const asUtf8 = utf8.decode(raw);
-  if (!asUtf8.includes("�")) return asUtf8.normalize("NFC");
-  if (eucKr) {
-    try {
-      return eucKr.decode(raw).normalize("NFC");
-    } catch {
-      /* fall through */
-    }
-  }
-  return asUtf8;
-}
-
-/** Resolve an id to an absolute path, refusing anything outside data/. */
-function resolveId(id: string | undefined): Buffer {
-  const rel = id ? decodeId(id) : Buffer.alloc(0);
-  if (rel.includes(0)) throw new Error("invalid path");
-  const abs = rel.length
-    ? Buffer.concat([Buffer.from(DATA_DIR + path.sep), rel])
-    : Buffer.from(DATA_DIR);
-  const normalized = path.resolve(abs.toString("binary"));
-  const base = path.resolve(DATA_DIR.toString());
-  if (normalized !== base && !normalized.startsWith(base + path.sep)) {
-    throw new Error("path escapes data directory");
-  }
-  return abs;
-}
-
-const join = (parent: Buffer, name: Buffer): Buffer =>
-  parent.length ? Buffer.concat([parent, Buffer.from(path.sep), name]) : name;
 
 const app = express();
 
@@ -370,6 +328,49 @@ app.post(
 /** Monster sprites are standalone `.spr`/`.act` pairs in `몬스터/`. */
 app.get("/api/monsters", async (_req, res) => {
   res.json(await listParts("몬스터"));
+});
+
+/**
+ * Pets are a subset of those same monsters -- see `pets.ts` for how they are
+ * told apart, and for the memoization behind this.
+ */
+app.get("/api/pets", async (_req, res) => {
+  try {
+    res.json(await listPetsCached());
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+/**
+ * A pre-rendered part preview, written by `npm run thumbs`.
+ *
+ * Misses answer 404 rather than rendering on the spot: the client can still
+ * compose the preview itself, and a miss should be visible as "the cache has
+ * not been built for this file" rather than quietly costing a render per hit.
+ */
+app.get("/api/thumb", async (req, res) => {
+  const id = typeof req.query.id === "string" ? req.query.id : undefined;
+  if (!id) return res.status(400).json({ error: "missing id" });
+  try {
+    resolveId(id); // reject ids that do not name a file under data/
+  } catch (err) {
+    return res.status(400).json({ error: (err as Error).message });
+  }
+
+  const tile = Number(req.query.tile ?? TILE);
+  if (!Number.isInteger(tile) || tile < 1 || tile > 512) {
+    return res.status(400).json({ error: "tile out of range" });
+  }
+
+  try {
+    const bytes = await fs.readFile(thumbFile(THUMB_DIR, id, tile));
+    res.setHeader("Content-Type", "image/webp");
+    res.setHeader("Cache-Control", "public, max-age=86400");
+    res.send(bytes);
+  } catch {
+    res.status(404).end();
+  }
 });
 
 app.get("/api/file", async (req, res) => {

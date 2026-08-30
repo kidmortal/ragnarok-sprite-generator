@@ -66,7 +66,7 @@ export function MonsterTab() {
 
   return (
     <div className="generator">
-      <aside className="panel one-column">
+      <aside className="panel one-column monster-panel">
         <PartPicker
           label="Monster"
           entries={monsters}

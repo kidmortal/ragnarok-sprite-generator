@@ -28,8 +28,8 @@ files and composes them in the browser. Both halves have to be running to export
 
 **Batch export tab** — every selected part as its **own** spritesheet, in one zip:
 
-- Pick which kinds to emit (bodies, heads, headgears, weapons, shields, garments, monsters),
-  which races and genders, and which actions.
+- Pick which kinds to emit (bodies, heads, headgears, weapons, shields, garments, monsters,
+  pets), which races and genders, and which actions.
 - One lossless WebP sheet per part plus a single `manifest.json` carrying every part's metadata inline.
   Sheets are encoded by libwebp on the server rather than by `canvas.toBlob`, which selects lossless
   but not how hard to work at it — the same sprites came out 3.8x heavier from one browser build than
@@ -37,15 +37,28 @@ files and composes them in the browser. Both halves have to be running to export
   from a rotated frame cannot cost the encoder its palette transform. Both in `docs/how-it-works.md`.
 - This is the path that feeds a game engine that composes characters at **runtime** — one
   sheet per body and one per head, rather than one per combination. See `PLAN.md`.
-- **Monsters are exported on their own terms**, in the same run and the same manifest: their own
-  four actions (`stand`, `attack`, `hurt`, `dead`) and their own facing, **south-west** by
-  default. They wear nothing, so they ship without the per-frame anchor table a body owes its
-  heads — one sheet is the whole monster, and an engine plays it as an ordinary spritesheet.
+- **Monsters and pets are exported on their own terms**, in the same run and the same manifest:
+  their own four actions (`stand`, `attack`, `hurt`, `dead`) and their own facing — **south-west**
+  for monsters, **south-east** for pets, since a pet stands on the party's side of the field and
+  an opponent faces across it. Both wear nothing, so they ship without the per-frame anchor table
+  a body owes its heads — one sheet is the whole sprite, and an engine plays it as an ordinary
+  spritesheet. Pets export their plain sprite; the accessory act is a preview-only toggle.
 
 **Monsters tab** — the same preview and exports for any of the ~986 sprites in
 `몬스터/`. Monsters are standalone sprites with no head, equipment or attach
 points, so the tab is just a picker: choose one, pick an action (stand, move,
 attack, hurt, dead) and a facing.
+
+**Pets tab** — the monsters a player can tame (146 of them in the extraction
+this was built against). The data has no pet folder, so the roster is mostly
+derived from `몬스터/` itself: a pet either ships an *accessory act* — the same
+sprite animated wearing its equipment, which the **Wearing accessory** toggle swaps in — or carries action
+groups past `dead`, which only a pet is ever asked to play. Those extra groups
+are offered as **Special 1…n**, taken from whichever act is loaded. Pets that
+carry neither mark — the Puzzle & Dragons collaboration sprites animate like any
+other monster — come from `server/resolver-data/pet_names.txt`, a copy of
+rAthena's pet_db that also names the accessories in English. See
+`docs/how-it-works.md`.
 
 ## You need Ragnarok sprite data
 
@@ -81,6 +94,7 @@ files whose names are legacy EUC-KR rather than UTF-8.
 
 ```bash
 npm install
+npm run thumbs   # pre-render picker previews into cache/thumbs (once, after adding data)
 npm run dev      # server on :3001, client on :5173
 ```
 

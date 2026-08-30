@@ -41,6 +41,26 @@ export const MONSTER_ACTIONS = [
   { name: "Dead", base: 32 },
 ] as const;
 
+/**
+ * Actions offered for a sprite whose act runs past the monster list.
+ *
+ * Pets carry three or four action groups beyond die -- the idle and performance
+ * animations the client plays for a cordial pet. The client's own names for
+ * them are not documented anywhere I can point at, so they are numbered rather
+ * than guessed at, and the list is taken from the act in hand so a seven-group
+ * pet is not offered slots it does not have.
+ */
+export function actionsForAct(act: Act): readonly { name: string; base: number }[] {
+  const groups = Math.floor(act.actions.length / 8);
+  const actions: { name: string; base: number }[] = MONSTER_ACTIONS.filter(
+    (action) => action.base / 8 < groups
+  ).map((action) => ({ name: action.name, base: action.base }));
+  for (let group = MONSTER_ACTIONS.length; group < groups; group++) {
+    actions.push({ name: `Special ${group - MONSTER_ACTIONS.length + 1}`, base: group * 8 });
+  }
+  return actions;
+}
+
 export const DIRECTIONS = [
   "South",
   "South-west",

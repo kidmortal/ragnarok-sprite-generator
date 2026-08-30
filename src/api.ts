@@ -45,3 +45,16 @@ export async function fetchMonsters(): Promise<PartEntry[]> {
   if (!res.ok) throw new Error(res.statusText);
   return res.json();
 }
+
+export type PetAccessory = { name: string; sprId: string; actId: string };
+/**
+ * A pet is a monster sprite that also ships an act of itself wearing its
+ * equipment; that act usually shares the pet's `.spr`. See `server/pets.ts`.
+ */
+export type PetEntry = PartEntry & { accessory: PetAccessory | null };
+
+export async function fetchPets(): Promise<PetEntry[]> {
+  const res = await fetch("/api/pets");
+  if (!res.ok) throw new Error(res.statusText);
+  return res.json();
+}

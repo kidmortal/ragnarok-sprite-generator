@@ -52,6 +52,40 @@ data has nothing to give them: costume bodies such as 결혼 or 산타 have no w
 folder at all, and Madogear has only weapon *slash* sprites. A Shield or Garment
 picker can still read "None for this job" for a listed body.
 
+## Telling a pet from a monster
+
+There is no pet folder. A pet is an ordinary monster sprite in `몬스터/`, and
+`server/pets.ts` recovers the roster from two marks in the data itself, either
+of which is enough, plus a vendored table for the pets that carry neither:
+
+**An accessory act.** A pet that can wear equipment ships a second act named
+`{pet}_{액세서리}` — the same pet animated wearing it. For 23 of the 39 that
+have one there is no matching `.spr`: the act indexes into the *pet's* sprite,
+so a pet is one sprite with two acts rather than two sprites.
+
+Which sprite is not always obvious from the name, because the prefix is
+ambiguous. `poring_책가방` starts with both `poring` and `poring_`, which is a
+different mob. The act settles it: the highest sprite index its layers draw is
+48, and `poring.spr` holds 49 frames while `poring_.spr` holds 47. So the pet is
+the *longest* prefix whose sprite actually holds the frames the act asks for —
+which also picks `baphomet_` (Bapho Jr.) over `baphomet` for `baphomet_뼉다구모자`.
+Only headers are read, so no pixels are decoded to answer this.
+
+**Extra action groups.** An ordinary monster act has five groups of eight
+facings — idle, walk, attack, hurt, die. Pets carry three or four more, the idle
+and performance animations the client plays for a cordial pet, and a sprite with
+eight groups or more is taken as a pet on that alone. This is what catches
+Drops, Poporing and Marin, whose accessory sprites this data set does not carry;
+the threshold sits at eight rather than six because a handful of bosses have a
+sixth and seventh group for extra attacks.
+
+The client has no documented names for those extra groups, so the UI numbers
+them `Special 1…n` off the loaded act rather than guessing.
+
+One known rough edge: White Lady's accessory act reaches a frame her sprite does
+not have (73 against 72). The composer skips a layer whose sprite index is out
+of range, so it renders with that layer missing — as it would in the client.
+
 ## Exporting parts separately
 
 The single-composition export bakes a finished character. The batch export does the opposite: it
@@ -73,6 +107,20 @@ is already aligned to the character origin and needs no correction at all.
 
 Each sheet declares an `origin` pixel, and what that pixel *means* is the whole contract: the
 character origin for an unparented part, the attach point for a head or headgear.
+
+Monsters and pets go through the same renderer as a body, and are unparented in the same way, so
+they need none of that correction — but they get their own controls in the tab rather than sharing
+the player's. Both default to four poses (`stand`, `attack`, `hurt`, `dead`; `move` is offered
+because the sprite has it, and an action nothing plays is pure archive weight), and each has its
+own facing: **south-west** for a monster and **south-east** for a pet. That is one decision, not
+two copies of the same one — the party stands on the left of the field, so a monster reads as
+facing them at three-quarters from the right, and a pet standing beside its owner has to look the
+other way. A player is exported facing **south**, at the camera, because a character screen looks
+at you.
+
+Pets export their plain sprite. The accessory act is a preview-only toggle, and their `Special`
+performance groups are not offered in a batch: how many a pet has is a property of its act, and a
+batch applies one action list to every sprite in it.
 
 `src/lib/zip.ts` is a store-only zip writer, because a few hundred browser downloads is not a
 usable export and the WebP sheets are already compressed. It reuses `crc32` from the APNG encoder.
@@ -133,14 +181,34 @@ Tiles are composed through the `.act` rather than taken raw from the `.spr`,
 since a body's first spr frame is only a fragment of the sprite. Each tile shows
 the first action that actually draws something — weapons and shields are blank
 in the stand pose (`sprIndex: -1`, zero alpha) and only appear from attack-wait
-onwards.
+onwards, and within that action the frame with the most opaque pixels wins.
+
+That composition is the same for every visitor and every reload, so
+`npm run thumbs` does it once ahead of time: it walks every `.spr`/`.act` pair
+under `data/` and writes a 64px lossless WebP per part into
+`cache/thumbs/<hh>/<rest>.webp`, keyed by sha256 of the file's id and tile size.
+For ~24k parts that is around 14 MB, roughly 600 bytes a tile, and the picker
+then costs one small image per tile instead of two file downloads and a canvas
+compose.
+
+There is no canvas in node, so `server/thumbnail.ts` reuses the pure half of the
+compose module — draw ops and bounds — and paints the ops with a
+nearest-neighbour rasteriser, which is what the browser canvas does once
+`imageSmoothingEnabled` is off. sharp encodes the result.
+
+A tile asks `/api/thumb` first and falls back to composing in the browser when
+the answer is 404, so a data folder whose thumbnails have not been generated
+still works — just at the old cost. Re-run the command after adding sprites;
+`--force` re-renders what is already cached.
 
 ## API
 
 | Route | Purpose |
 | --- | --- |
 | `GET /api/file?id=<id>` | Raw file bytes |
+| `GET /api/thumb?id=<spr id>&tile=<px>` | Pre-rendered part preview as WebP; 404 when not generated |
 | `GET /api/monsters` | Every `.spr`/`.act` pair in `몬스터/` |
+| `GET /api/pets` | The tameable subset, each with its accessory act if the data has one |
 | `GET /api/parts?race=human\|doram&gender=male\|female` | Body, head and headgear lists, each pairing a `.spr` with its `.act` |
 | `GET /api/equipment?race&gender&body=<body sprite name>` | Weapon, shield and garment lists for that body's job |
 | `POST /api/encode?w&h` | A packed sheet as raw RGBA in, lossless WebP out |

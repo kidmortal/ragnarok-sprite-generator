@@ -3,6 +3,7 @@ import {
   fetchEquipment,
   fetchMonsters,
   fetchParts,
+  fetchPets,
   type Equipment,
   type PartEntry,
   type PartsCatalog,
@@ -58,6 +59,26 @@ const DEFAULT_ACTIONS = ["stand", "idle", "walk", "hurt", "dead", "skill"];
 const ATTACK_VARIANTS = ["attack", "attack2", "attack3"] as const;
 
 /**
+ * Which RO pose an exported action's frames are taken from, when it must not be
+ * the pose of the same name.
+ *
+ * An engine animation is bound to an exported *name* -- a game plays `cast`,
+ * and `cast` is whatever the manifest filed under `skill`. Plenty of sprites
+ * ship a skill pose that is broken, or simply a single frame of nothing, and
+ * the fix a spriter would reach for is "cast on attack 3 instead". This map is
+ * that: the name an engine asks for stays put, the frames behind it move. The
+ * `base` recorded in the manifest is the *source* pose, so an export says which
+ * substitution it was made with.
+ *
+ * Overrides apply to every part in the run, body and weapons alike, for the
+ * same reason the attack pose does: two parts animating different poses under
+ * one name drift apart frame by frame.
+ */
+type PoseSources = Record<string, string>;
+
+const BASE_BY_SLUG = new Map(PLAYER_SHEET_ACTIONS.map((spec) => [spec.slug, spec.base]));
+
+/**
  * What a monster is exported with by default.
  *
  * A monster is a standalone sprite that wears nothing and walks nowhere on our
@@ -77,6 +98,26 @@ const DEFAULT_MONSTER_ACTIONS = ["stand", "attack", "hurt", "dead"];
  * a character screen looks at you - and south-west is what an opponent wants.
  */
 const MONSTER_DIRECTION = 1;
+
+/**
+ * What a pet is exported with by default.
+ *
+ * A pet fights nobody and carries nothing, so it ships the same four poses a
+ * monster does. Its own `Special` performance groups are deliberately not
+ * offered: how many a pet has is a property of its act -- seven groups for
+ * some, nine for others -- and a batch is one action list applied to every
+ * sprite in it.
+ */
+const DEFAULT_PET_ACTIONS = ["stand", "attack", "hurt", "dead"];
+
+/**
+ * Pets face **south-east**, the mirror of the monster's south-west.
+ *
+ * A pet stands on its owner's side of the battlefield, so it faces the way the
+ * party faces rather than the way the opponents do. Same reasoning as the
+ * monster direction, opposite answer, which is why it is its own control.
+ */
+const PET_DIRECTION = 7;
 
 const isAttack = (slug: string): boolean =>
   (ATTACK_VARIANTS as readonly string[]).includes(slug);
@@ -152,8 +193,14 @@ export function ExportTab() {
   const [monsterActions, setMonsterActions] = useState<string[]>(DEFAULT_MONSTER_ACTIONS);
   const [monsterDirection, setMonsterDirection] = useState(MONSTER_DIRECTION);
 
+  const [pets, setPets] = useState<PartEntry[] | null>(null);
+  const [pickedPets, setPickedPets] = useState<Set<string>>(new Set());
+  const [petActions, setPetActions] = useState<string[]>(DEFAULT_PET_ACTIONS);
+  const [petDirection, setPetDirection] = useState(PET_DIRECTION);
+
   const [actions, setActions] = useState<string[]>(DEFAULT_ACTIONS);
   const [attackVariant, setAttackVariant] = useState<string>("attack");
+  const [sources, setSources] = useState<PoseSources>({});
   const [direction, setDirection] = useState(0);
   const [headDirection, setHeadDirection] = useState(0);
 
@@ -166,19 +213,30 @@ export function ExportTab() {
   const [failures, setFailures] = useState<string[]>([]);
 
   const specs = useMemo<SheetActionSpec[]>(() => {
-    const chosen = PLAYER_SHEET_ACTIONS.find((spec) => spec.slug === attackVariant);
+    // Each action ships under its own name, drawn from whatever pose it was
+    // pointed at -- itself, unless overridden.
+    const sourced = (slug: string): SheetActionSpec[] => {
+      const base = BASE_BY_SLUG.get(sources[slug] ?? slug);
+      return base === undefined ? [] : [{ slug, base }];
+    };
     return PLAYER_SHEET_ACTIONS.flatMap((spec) => {
       // Whichever variant is chosen ships under the plain `attack` name, in the
       // slot the base attack would have taken.
-      if (spec.slug === "attack") return chosen ? [{ slug: "attack", base: chosen.base }] : [];
+      if (spec.slug === "attack") return [{ slug: "attack", base: BASE_BY_SLUG.get(attackVariant)! }];
       if (isAttack(spec.slug)) return [];
-      return actions.includes(spec.slug) ? [spec] : [];
+      return actions.includes(spec.slug) ? sourced(spec.slug) : [];
     });
-  }, [actions, attackVariant]);
+  }, [actions, attackVariant, sources]);
 
   const monsterSpecs = useMemo<SheetActionSpec[]>(
     () => MONSTER_SHEET_ACTIONS.filter((spec) => monsterActions.includes(spec.slug)),
     [monsterActions]
+  );
+
+  // Pets are drawn from the same five monster poses; only the defaults differ.
+  const petSpecs = useMemo<SheetActionSpec[]>(
+    () => MONSTER_SHEET_ACTIONS.filter((spec) => petActions.includes(spec.slug)),
+    [petActions]
   );
 
   // Bodies, heads and headgears are all race/gender-scoped, so they reload
@@ -258,6 +316,16 @@ export function ExportTab() {
     }
   }
 
+  async function loadPets() {
+    if (pets) return;
+    try {
+      setPets(await fetchPets());
+    } catch (err) {
+      setStatus(`Could not list pets: ${(err as Error).message}`);
+      setPets([]);
+    }
+  }
+
   /** Everything currently ticked, as render jobs. The body always comes along. */
   const jobs = useMemo<Job[]>(() => {
     const list: Job[] = [];
@@ -283,8 +351,12 @@ export function ExportTab() {
       if (pickedMonsters.has(entry.sprId)) list.push({ entry, kind: "monster" });
     }
 
+    for (const entry of pets ?? []) {
+      if (pickedPets.has(entry.sprId)) list.push({ entry, kind: "pet" });
+    }
+
     return list;
-  }, [body, equipment, picked, catalog, monsters, pickedMonsters, race, gender]);
+  }, [body, equipment, picked, catalog, monsters, pickedMonsters, pets, pickedPets, race, gender]);
 
   async function loadBaseManifest(file: File) {
     try {
@@ -329,7 +401,10 @@ export function ExportTab() {
       }
 
       const anyMonsters = pending.some((job) => job.kind === "monster");
-      const anyPlayerParts = pending.some((job) => job.kind !== "monster");
+      const anyPets = pending.some((job) => job.kind === "pet");
+      const anyPlayerParts = pending.some(
+        (job) => job.kind !== "monster" && job.kind !== "pet"
+      );
 
       const zip = new ZipBuilder();
       const manifestEntries: PartMeta[] = [];
@@ -340,14 +415,20 @@ export function ExportTab() {
 
       await mapWithConcurrency(pending, MAX_PARALLEL, async (job) => {
         try {
-          // A monster is exported on its own terms: its own action list, and
-          // its own facing. Sharing the player's controls would point every
-          // opponent at the camera and ship it with a walk cycle nothing plays.
-          const monster = job.kind === "monster";
+          // Monsters and pets are each exported on their own terms: their own
+          // action list, and their own facing. Sharing the player's controls
+          // would point every opponent at the camera and ship it with a walk
+          // cycle nothing plays, and pets and monsters face opposite ways.
+          const own =
+            job.kind === "monster"
+              ? { specs: monsterSpecs, direction: monsterDirection }
+              : job.kind === "pet"
+                ? { specs: petSpecs, direction: petDirection }
+                : { specs, direction };
           const options: ExportOptions = {
             kind: job.kind,
-            specs: monster ? monsterSpecs : specs,
-            direction: monster ? monsterDirection : direction,
+            specs: own.specs,
+            direction: own.direction,
             headDirection,
             ...(job.race ? { race: job.race } : {}),
             ...(job.gender ? { gender: job.gender } : {}),
@@ -369,9 +450,14 @@ export function ExportTab() {
         stringifyManifest(
           buildManifest(
             manifestEntries,
-            // Both lists: the manifest's `actions` is what the archive
-            // contains, and a monsters-only run contains monster actions.
-            [...(anyPlayerParts ? specs : []), ...(anyMonsters ? monsterSpecs : [])],
+            // Every list the archive actually contains: the manifest's
+            // `actions` describes this run, and a pets-only run contains pet
+            // actions and nothing else.
+            [
+              ...(anyPlayerParts ? specs : []),
+              ...(anyMonsters ? monsterSpecs : []),
+              ...(anyPets ? petSpecs : []),
+            ],
             direction,
             headDirection,
             base
@@ -380,10 +466,20 @@ export function ExportTab() {
       );
 
       const blob = zip.build();
+      // Named after whatever the run is mostly about, and facing whichever
+      // control that half was exported with -- a pets-only archive is not
+      // called "monsters" and does not claim the monster facing.
       const stem = anyPlayerParts
         ? `ro-${equipment?.job ?? body?.name ?? "parts"}`
-        : "ro-monsters";
-      const facing = DIRECTIONS[anyPlayerParts ? direction : monsterDirection];
+        : anyMonsters
+          ? anyPets
+            ? "ro-monsters-pets"
+            : "ro-monsters"
+          : "ro-pets";
+      const facing =
+        DIRECTIONS[
+          anyPlayerParts ? direction : anyMonsters ? monsterDirection : petDirection
+        ];
       download(blob, `${stem}-${facing.toLowerCase()}.zip`);
 
       setProgress(null);
@@ -404,9 +500,11 @@ export function ExportTab() {
   // Each half of a run needs its own actions ticked, and only the half that is
   // actually being exported: a monsters-only run is not held up by the player
   // action list being empty.
-  const hasActions = jobs.every((job) =>
-    job.kind === "monster" ? monsterSpecs.length > 0 : specs.length > 0
-  );
+  const hasActions = jobs.every((job) => {
+    if (job.kind === "monster") return monsterSpecs.length > 0;
+    if (job.kind === "pet") return petSpecs.length > 0;
+    return specs.length > 0;
+  });
 
   return (
     <div className="export-tab">
@@ -553,27 +651,136 @@ export function ExportTab() {
           </div>
         </details>
 
+        <details onToggle={(e) => e.currentTarget.open && void loadPets()}>
+          <summary className="section-summary">
+            Pets {pickedPets.size > 0 && <em>{pickedPets.size} selected</em>}
+          </summary>
+          <SelectGrid
+            label="Pets"
+            entries={pets ?? []}
+            count={pickedPets.size}
+            isOn={(entry) => pickedPets.has(entry.sprId)}
+            onToggle={(entry) =>
+              setPickedPets((prev) => {
+                const next = new Set(prev);
+                if (next.has(entry.sprId)) next.delete(entry.sprId);
+                else next.add(entry.sprId);
+                return next;
+              })
+            }
+            onBulk={(ids, on) =>
+              setPickedPets((prev) => {
+                const next = new Set(prev);
+                for (const id of ids) {
+                  if (on) next.add(id);
+                  else next.delete(id);
+                }
+                return next;
+              })
+            }
+            disabled={busy}
+            empty={pets ? "No pets found." : "Loading…"}
+            hint="The tameable monsters, exported without their accessory."
+          />
+
+          <div className="row">
+            <fieldset className="picker">
+              <legend>Pet actions</legend>
+              <div className="action-grid">
+                {MONSTER_SHEET_ACTIONS.map((spec) => (
+                  <label key={spec.slug} className="check">
+                    <input
+                      type="checkbox"
+                      checked={petActions.includes(spec.slug)}
+                      disabled={busy}
+                      onChange={() =>
+                        setPetActions((prev) =>
+                          prev.includes(spec.slug)
+                            ? prev.filter((slug) => slug !== spec.slug)
+                            : [...prev, spec.slug]
+                        )
+                      }
+                    />
+                    {spec.slug}
+                  </label>
+                ))}
+              </div>
+              <p className="meta">
+                The same four poses a monster ships: <code>stand</code>, <code>attack</code>,{" "}
+                <code>hurt</code> and <code>dead</code>. A pet's own <code>Special</code>
+                performance groups are not offered here — how many a pet has depends on its act,
+                and a batch applies one action list to every sprite in it.
+              </p>
+            </fieldset>
+
+            <fieldset className="picker">
+              <legend>Pet facing</legend>
+              <label>
+                Facing
+                <select
+                  value={petDirection}
+                  disabled={busy}
+                  onChange={(e) => setPetDirection(Number(e.target.value))}
+                >
+                  {DIRECTIONS.map((name, i) => (
+                    <option key={name} value={i}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <p className="meta">
+                South-east by default — the mirror of the monster facing. A pet stands on its
+                owner's side of the field, so it looks the way the party looks, not back at it.
+              </p>
+            </fieldset>
+          </div>
+        </details>
+
         <div className="row">
           <fieldset className="picker">
             <legend>Actions</legend>
-            <div className="action-grid">
-              {CHECKBOX_ACTIONS.map((spec) => (
-                <label key={spec.slug} className="check">
-                  <input
-                    type="checkbox"
-                    checked={actions.includes(spec.slug)}
-                    disabled={busy}
-                    onChange={() =>
-                      setActions((prev) =>
-                        prev.includes(spec.slug)
-                          ? prev.filter((slug) => slug !== spec.slug)
-                          : [...prev, spec.slug]
-                      )
-                    }
-                  />
-                  {spec.slug}
-                </label>
-              ))}
+            <div className="action-list">
+              {CHECKBOX_ACTIONS.map((spec) => {
+                const on = actions.includes(spec.slug);
+                const from = sources[spec.slug] ?? spec.slug;
+                return (
+                  <div key={spec.slug} className="action-row">
+                    <label className="check">
+                      <input
+                        type="checkbox"
+                        checked={on}
+                        disabled={busy}
+                        onChange={() =>
+                          setActions((prev) =>
+                            prev.includes(spec.slug)
+                              ? prev.filter((slug) => slug !== spec.slug)
+                              : [...prev, spec.slug]
+                          )
+                        }
+                      />
+                      {spec.slug}
+                    </label>
+                    {on && (
+                      <select
+                        className={from === spec.slug ? undefined : "overridden"}
+                        title={`Pose the ${spec.slug} frames come from`}
+                        value={from}
+                        disabled={busy}
+                        onChange={(e) =>
+                          setSources((prev) => ({ ...prev, [spec.slug]: e.target.value }))
+                        }
+                      >
+                        {PLAYER_SHEET_ACTIONS.map((source) => (
+                          <option key={source.slug} value={source.slug}>
+                            {source.slug === spec.slug ? source.slug : `from ${source.slug}`}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                );
+              })}
             </div>
             <label className="attack-pick">
               Attack pose
@@ -593,6 +800,11 @@ export function ExportTab() {
               Always exported, as <code>attack</code>. Body and weapons share the pose, so they
               stay in sync — most jobs swing on <code>attack</code>, some on <code>attack2</code>{" "}
               or <code>attack3</code>.
+            </p>
+            <p className="meta">
+              Every other action keeps its name but can be drawn from a different pose: a sprite
+              whose <code>skill</code> animation is broken can ship <code>skill</code>{" "}
+              <em>from attack3</em>, and the engine plays its cast unchanged.
             </p>
           </fieldset>
 

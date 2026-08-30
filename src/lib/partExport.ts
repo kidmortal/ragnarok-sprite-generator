@@ -24,7 +24,7 @@ import { parseSpr } from "./spr";
  */
 export type PartMeta = {
   key: string;
-  kind: PartKind | "monster";
+  kind: PartKind | "monster" | "pet";
   /** The sprite's Korean name, for a human reading the manifest. */
   label: string;
   /** The app's own id for the source file: base64url of the raw path bytes. */
@@ -83,10 +83,11 @@ export async function exportPart(
 ): Promise<ExportedPart> {
   const [sprBuf, actBuf] = await Promise.all([fetchFile(entry.sprId), fetchFile(entry.actId)]);
 
-  // Monsters compose as a standalone sprite, so they render on the body's
-  // terms: origin at the character origin, no attach point.
-  const monster = options.kind === "monster";
-  const kind: PartKind = options.kind === "monster" ? "body" : options.kind;
+  // Monsters and pets compose as a standalone sprite, so they render on the
+  // body's terms: origin at the character origin, no attach point.
+  const kind: PartKind =
+    options.kind === "monster" || options.kind === "pet" ? "body" : options.kind;
+  const standalone = kind !== options.kind;
   const part: Part = {
     kind,
     zIndex: Z_INDEX[kind],
@@ -101,9 +102,9 @@ export async function exportPart(
     options.specs,
     options.direction,
     options.headDirection,
-    // A monster renders as a body but nothing ever attaches to it, so it ships
+    // These render as a body but nothing ever attaches to them, so they ship
     // without the anchor table a real body owes its heads.
-    !monster
+    !standalone
   );
 
   const packed = await encodeSpritesheet(sheet.frames, sheet.columns);

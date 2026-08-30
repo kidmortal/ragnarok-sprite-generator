@@ -4,3 +4,4 @@ data
 sprite
 *.log
 .DS_Store
+cache

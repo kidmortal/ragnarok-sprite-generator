@@ -45,6 +45,9 @@ export function loadPartThumb(sprId: string, actId: string, tile = TILE): Promis
   if (cached) return cached;
 
   const promise = schedule(async () => {
+    const cached = await fetchCachedThumb(sprId, tile);
+    if (cached) return cached;
+
     const [sprBuf, actBuf] = await Promise.all([fetchFile(sprId), fetchFile(actId)]);
     const part = {
       kind: "body" as const,
@@ -84,6 +87,42 @@ export function loadPartThumb(sprId: string, actId: string, tile = TILE): Promis
   promise.catch(() => cache.delete(key));
   cache.set(key, promise);
   return promise;
+}
+
+/**
+ * The preview `npm run thumbs` rendered for this part, if there is one.
+ *
+ * Composing a preview costs a .spr and an .act download plus a canvas compose
+ * per tile, so the pre-rendered WebP is tried first and the composer is left as
+ * the fallback for parts the cache has not been built for.
+ */
+async function fetchCachedThumb(sprId: string, tile: number): Promise<Thumb | null> {
+  let res: Response;
+  try {
+    res = await fetch(`/api/thumb?id=${encodeURIComponent(sprId)}&tile=${tile}`);
+  } catch {
+    return null; // offline or the API is down; the composer will fail too
+  }
+  if (!res.ok) return null;
+
+  const url = URL.createObjectURL(await res.blob());
+  try {
+    const { width, height } = await measure(url);
+    return { url, width, height };
+  } catch {
+    URL.revokeObjectURL(url);
+    return null;
+  }
+}
+
+/** Natural size of an image url, since the tile is not told the dimensions. */
+function measure(url: string): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
+    img.onerror = () => reject(new Error("bad thumbnail"));
+    img.src = url;
+  });
 }
 
 /** Rough "how much is drawn here" measure, used to pick a preview frame. */

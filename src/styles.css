@@ -204,6 +204,21 @@ h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: v
 /* Monsters tab has a single picker, so it does not need two columns. */
 .panel.one-column { grid-template-columns: minmax(0, 1fr); }
 
+/*
+ * The monster picker is the only thing in its panel, so let it grow to fill the
+ * row instead of scrolling inside a short 210px box -- but no taller than the
+ * viewport, so the grid keeps its own scrollbar instead of stretching the page.
+ */
+@media (min-width: 901px) {
+  .panel.monster-panel { align-content: stretch; grid-template-rows: minmax(0, 1fr) auto; }
+  .panel.monster-panel .picker { min-height: 0; }
+  .panel.monster-panel .tile-grid { max-height: calc(100vh - 170px); min-height: 0; flex: 1; }
+}
+
+/* The pets tab hangs one toggle off the bottom of that same picker panel. */
+.panel.monster-panel > .check { padding-top: 8px; border-top: 1px solid var(--line); }
+.panel.monster-panel > .check input:disabled + span { opacity: .5; }
+
 /* ---- batch export ---- */
 
 .export-tab { padding-top: 16px; }
@@ -228,6 +243,15 @@ h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: v
 }
 
 .action-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 12px; }
+
+/* One action per row: the checkbox says whether it ships, the select says which
+   pose it is drawn from. */
+.action-list { display: flex; flex-direction: column; gap: 3px; }
+
+.action-row { display: flex; align-items: center; gap: 8px; }
+.action-row .check { flex: 1; min-width: 0; }
+.action-row select { padding: 1px 4px; font-size: 11px; max-width: 50%; }
+.action-row select.overridden { color: var(--accent); }
 
 .attack-pick {
   display: flex;
