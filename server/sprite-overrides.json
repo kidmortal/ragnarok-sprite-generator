@@ -1,0 +1,749 @@
+{
+  "$comment": [
+    "Per-sprite export settings that cannot be derived from the sprite itself.",
+    "",
+    "RO gives a job three attack animations and a job really uses only one of them; which one is a",
+    "property of the job rather than of the file, and nothing in the data says which. The same goes",
+    "for a broken pose: plenty of sprites ship a `skill` that is one frame of nothing, and the fix a",
+    "spriter reaches for is 'cast it on attack 3 instead'. Both are judgements somebody makes by",
+    "looking at the sprite animate.",
+    "",
+    "They live here, checked in, so that judgement is made once. An export driven by this table",
+    "reproduces the same art next month without anybody being told again - which is the whole",
+    "difference between a pipeline and a person remembering. Without it, a re-export silently",
+    "changes what the game draws.",
+    "",
+    "`attack` is which of attack/attack2/attack3 becomes the exported `attack`; it applies to the",
+    "body AND every weapon in the same run, because a body swinging one pose against a weapon",
+    "animated on another drifts apart frame by frame.",
+    "",
+    "`poses` remaps an exported name onto a different source pose. The name an engine asks for stays",
+    "put; the frames behind it move. The manifest records the source as `base`, so an export always",
+    "says which substitution it was made with.",
+    "",
+    "Match order: `keys` (a manifest key, most specific), then `names` (the sprite's own name), then",
+    "`defaults` for the kind. Anything absent uses the defaults, which is nearly everything."
+  ],
+  "defaults": {
+    "body": {
+      "attack": "attack",
+      "poses": {}
+    },
+    "monster": {
+      "attack": "attack",
+      "poses": {}
+    },
+    "pet": {
+      "attack": "attack",
+      "poses": {}
+    }
+  },
+  "names": {},
+  "keys": {
+    "body_8ea60b0c": {
+      "attack": "attack2",
+      "poses": {
+        "skill": "attack3"
+      }
+    },
+    "body_edd1e431": {
+      "attack": "attack2",
+      "poses": {
+        "skill": "attack3"
+      }
+    },
+    "body_e3ea1ddb": {
+      "attack": "attack2"
+    },
+    "body_2821c95c": {
+      "attack": "attack2"
+    },
+    "body_d7598f74": {
+      "attack": "attack2"
+    },
+    "body_0e273e84": {
+      "attack": "attack2"
+    },
+    "body_4a55e7c6": {
+      "attack": "attack3"
+    },
+    "body_5d2bf201": {
+      "attack": "attack3"
+    },
+    "head_d8713ee4": {
+      "attack": "attack2",
+      "poses": {
+        "skill": "attack3"
+      }
+    },
+    "head_ea772ac4": {
+      "attack": "attack2",
+      "poses": {
+        "skill": "attack3"
+      }
+    },
+    "head_4eddb2c8": {
+      "attack": "attack2",
+      "poses": {
+        "skill": "attack3"
+      }
+    },
+    "head_0b26b220": {
+      "attack": "attack2",
+      "poses": {
+        "skill": "attack3"
+      }
+    },
+    "head_78d27182": {
+      "attack": "attack2",
+      "poses": {
+        "skill": "attack3"
+      }
+    },
+    "head_e7484cf5": {
+      "attack": "attack2",
+      "poses": {
+        "skill": "attack3"
+      }
+    },
+    "head_bb9e46f6": {
+      "attack": "attack2",
+      "poses": {
+        "skill": "attack3"
+      }
+    },
+    "head_2adc5d12": {
+      "attack": "attack2",
+      "poses": {
+        "skill": "attack3"
+      }
+    },
+    "head_09cc7db6": {
+      "attack": "attack2",
+      "poses": {
+        "skill": "attack3"
+      }
+    },
+    "head_5e29bdd0": {
+      "attack": "attack2",
+      "poses": {
+        "skill": "attack3"
+      }
+    },
+    "head_a8e722ff": {
+      "attack": "attack2",
+      "poses": {
+        "skill": "attack3"
+      }
+    },
+    "head_4da88520": {
+      "attack": "attack2",
+      "poses": {
+        "skill": "attack3"
+      }
+    },
+    "head_1ae68f7c": {
+      "attack": "attack2",
+      "poses": {
+        "skill": "attack3"
+      }
+    },
+    "head_908db1c1": {
+      "attack": "attack2",
+      "poses": {
+        "skill": "attack3"
+      }
+    },
+    "head_0b83cfaf": {
+      "attack": "attack2",
+      "poses": {
+        "skill": "attack3"
+      }
+    },
+    "head_a1bf3483": {
+      "attack": "attack2",
+      "poses": {
+        "skill": "attack3"
+      }
+    },
+    "head_368e0100": {
+      "attack": "attack2",
+      "poses": {
+        "skill": "attack3"
+      }
+    },
+    "head_1d868843": {
+      "attack": "attack2",
+      "poses": {
+        "skill": "attack3"
+      }
+    },
+    "head_44bd2df6": {
+      "attack": "attack2",
+      "poses": {
+        "skill": "attack3"
+      }
+    },
+    "head_1b148d54": {
+      "attack": "attack2",
+      "poses": {
+        "skill": "attack3"
+      }
+    },
+    "headgear_b13b735b": {
+      "attack": "attack2",
+      "poses": {
+        "skill": "attack3"
+      }
+    },
+    "headgear_e956d2d9": {
+      "attack": "attack2",
+      "poses": {
+        "skill": "attack3"
+      }
+    },
+    "headgear_94721fc3": {
+      "attack": "attack2",
+      "poses": {
+        "skill": "attack3"
+      }
+    },
+    "headgear_ea80c988": {
+      "attack": "attack2",
+      "poses": {
+        "skill": "attack3"
+      }
+    },
+    "headgear_2f98a69f": {
+      "attack": "attack2",
+      "poses": {
+        "skill": "attack3"
+      }
+    },
+    "headgear_569fb2df": {
+      "attack": "attack2",
+      "poses": {
+        "skill": "attack3"
+      }
+    },
+    "headgear_e7c87305": {
+      "attack": "attack2",
+      "poses": {
+        "skill": "attack3"
+      }
+    },
+    "headgear_16656b76": {
+      "attack": "attack2",
+      "poses": {
+        "skill": "attack3"
+      }
+    },
+    "headgear_45de950d": {
+      "attack": "attack2",
+      "poses": {
+        "skill": "attack3"
+      }
+    },
+    "headgear_b9a9285c": {
+      "attack": "attack3"
+    },
+    "headgear_e92fb484": {
+      "attack": "attack2",
+      "poses": {
+        "skill": "attack3"
+      }
+    },
+    "headgear_5a399f2e": {
+      "attack": "attack2",
+      "poses": {
+        "skill": "attack3"
+      }
+    },
+    "headgear_43c13367": {
+      "attack": "attack2",
+      "poses": {
+        "skill": "attack3"
+      }
+    },
+    "headgear_38b92933": {
+      "attack": "attack2",
+      "poses": {
+        "skill": "attack3"
+      }
+    },
+    "headgear_2dc31605": {
+      "attack": "attack2",
+      "poses": {
+        "skill": "attack3"
+      }
+    },
+    "headgear_0bd1c5f3": {
+      "attack": "attack2",
+      "poses": {
+        "skill": "attack3"
+      }
+    },
+    "headgear_83e2a0f6": {
+      "attack": "attack2",
+      "poses": {
+        "skill": "attack3"
+      }
+    },
+    "headgear_e97ce667": {
+      "attack": "attack2",
+      "poses": {
+        "skill": "attack3"
+      }
+    },
+    "headgear_1f18f93d": {
+      "attack": "attack2",
+      "poses": {
+        "skill": "attack3"
+      }
+    },
+    "headgear_303dd0c1": {
+      "attack": "attack2",
+      "poses": {
+        "skill": "attack3"
+      }
+    },
+    "headgear_2c0281c6": {
+      "attack": "attack3"
+    },
+    "headgear_4c05beea": {
+      "attack": "attack3"
+    },
+    "headgear_5cc3950e": {
+      "attack": "attack3"
+    },
+    "headgear_e2777987": {
+      "attack": "attack3"
+    },
+    "headgear_6085b842": {
+      "attack": "attack3"
+    },
+    "headgear_a39a02a8": {
+      "attack": "attack3"
+    },
+    "headgear_78774d46": {
+      "attack": "attack3"
+    },
+    "headgear_34eb2272": {
+      "attack": "attack3"
+    },
+    "headgear_03bf37fd": {
+      "attack": "attack3"
+    },
+    "weapon_1322c7e6": {
+      "attack": "attack2",
+      "poses": {
+        "skill": "attack3"
+      }
+    },
+    "weapon_30d020ec": {
+      "attack": "attack2",
+      "poses": {
+        "skill": "attack3"
+      }
+    },
+    "weapon_07d3795e": {
+      "attack": "attack2",
+      "poses": {
+        "skill": "attack3"
+      }
+    },
+    "weapon_b6cd318f": {
+      "attack": "attack2",
+      "poses": {
+        "skill": "attack3"
+      }
+    },
+    "weapon_4b036975": {
+      "attack": "attack2",
+      "poses": {
+        "skill": "attack3"
+      }
+    },
+    "weapon_dc5fa89d": {
+      "attack": "attack2",
+      "poses": {
+        "skill": "attack3"
+      }
+    },
+    "weapon_7e9acda1": {
+      "attack": "attack2",
+      "poses": {
+        "skill": "attack3"
+      }
+    },
+    "weapon_97eae565": {
+      "attack": "attack2",
+      "poses": {
+        "skill": "attack3"
+      }
+    },
+    "weapon_c8f7a6c1": {
+      "attack": "attack2"
+    },
+    "weapon_4e9363d1": {
+      "attack": "attack2"
+    },
+    "weapon_70a3c3c4": {
+      "attack": "attack2"
+    },
+    "weapon_24c5c8cc": {
+      "attack": "attack2"
+    },
+    "weapon_22b5e69a": {
+      "attack": "attack2"
+    },
+    "weapon_905d6166": {
+      "attack": "attack2"
+    },
+    "weapon_c0757512": {
+      "attack": "attack2"
+    },
+    "weapon_a681f2c8": {
+      "attack": "attack2"
+    },
+    "weapon_8c49eb45": {
+      "attack": "attack2"
+    },
+    "weapon_3a9b5858": {
+      "attack": "attack2"
+    },
+    "weapon_1305b3ed": {
+      "attack": "attack2"
+    },
+    "weapon_8eb72a5f": {
+      "attack": "attack2"
+    },
+    "weapon_86adbda1": {
+      "attack": "attack3"
+    },
+    "weapon_e8196bdd": {
+      "attack": "attack3"
+    },
+    "weapon_0e382862": {
+      "attack": "attack3"
+    },
+    "weapon_6e2781ee": {
+      "attack": "attack3"
+    },
+    "weapon_666e76b2": {
+      "attack": "attack3"
+    },
+    "weapon_3ccf1017": {
+      "attack": "attack3"
+    },
+    "weapon_ab44ac77": {
+      "attack": "attack3"
+    },
+    "weapon_b799844a": {
+      "attack": "attack3"
+    },
+    "weapon_8267f909": {
+      "attack": "attack3"
+    },
+    "weapon_d08df165": {
+      "attack": "attack3"
+    },
+    "weapon_64449e0e": {
+      "attack": "attack3"
+    },
+    "weapon_470bd41b": {
+      "attack": "attack3"
+    },
+    "weapon_2f2c10a2": {
+      "attack": "attack3"
+    },
+    "garment_224c3086": {
+      "attack": "attack3"
+    },
+    "garment_ae492c4b": {
+      "attack": "attack3"
+    },
+    "garment_b9b20d05": {
+      "attack": "attack2"
+    },
+    "garment_2d4083d3": {
+      "attack": "attack2"
+    },
+    "garment_2e387f35": {
+      "attack": "attack3"
+    },
+    "garment_874d8dd1": {
+      "attack": "attack3"
+    },
+    "garment_dd7294d4": {
+      "attack": "attack2"
+    },
+    "garment_1836204c": {
+      "attack": "attack2"
+    },
+    "garment_8ec36201": {
+      "attack": "attack3"
+    },
+    "garment_0b78227c": {
+      "attack": "attack2"
+    },
+    "garment_6ce58c9b": {
+      "attack": "attack2"
+    },
+    "garment_bfd21b34": {
+      "attack": "attack3"
+    },
+    "garment_efffe722": {
+      "attack": "attack3"
+    },
+    "garment_0f1e7032": {
+      "attack": "attack2"
+    },
+    "garment_35bd1b70": {
+      "attack": "attack3"
+    },
+    "garment_5798bc6f": {
+      "attack": "attack3"
+    },
+    "garment_9c36d82f": {
+      "attack": "attack2"
+    },
+    "garment_bc65c127": {
+      "attack": "attack2"
+    },
+    "garment_2e7a2df0": {
+      "attack": "attack3"
+    },
+    "garment_969daa41": {
+      "attack": "attack3"
+    },
+    "garment_d61ccb01": {
+      "attack": "attack2"
+    },
+    "garment_e8e59c2a": {
+      "attack": "attack2"
+    },
+    "garment_12fd7001": {
+      "attack": "attack3"
+    },
+    "garment_8df9094d": {
+      "attack": "attack3"
+    },
+    "garment_7af591e2": {
+      "attack": "attack2"
+    },
+    "garment_ad710938": {
+      "attack": "attack2"
+    },
+    "garment_1066172b": {
+      "attack": "attack3"
+    },
+    "garment_db806a94": {
+      "attack": "attack3"
+    },
+    "garment_31799dbf": {
+      "attack": "attack2"
+    },
+    "garment_5c275d33": {
+      "attack": "attack2"
+    },
+    "garment_cb51a26c": {
+      "attack": "attack3"
+    },
+    "garment_c11f819c": {
+      "attack": "attack3"
+    },
+    "garment_eeae7aef": {
+      "attack": "attack3"
+    },
+    "garment_402359ab": {
+      "attack": "attack3"
+    },
+    "garment_7d97cc28": {
+      "attack": "attack2"
+    },
+    "garment_22f03279": {
+      "attack": "attack2"
+    },
+    "garment_f0265f6a": {
+      "attack": "attack3"
+    },
+    "garment_e0059ead": {
+      "attack": "attack3"
+    },
+    "garment_13a58e14": {
+      "attack": "attack2"
+    },
+    "garment_5557e2a0": {
+      "attack": "attack2"
+    },
+    "garment_5c603a2b": {
+      "attack": "attack3"
+    },
+    "garment_8ade07c8": {
+      "attack": "attack3"
+    },
+    "garment_6937a497": {
+      "attack": "attack2"
+    },
+    "garment_ed55c540": {
+      "attack": "attack2"
+    },
+    "garment_ec31ba89": {
+      "attack": "attack3"
+    },
+    "garment_cc2c3e4a": {
+      "attack": "attack3"
+    },
+    "garment_05907c84": {
+      "attack": "attack2"
+    },
+    "garment_d2b0d0e6": {
+      "attack": "attack2"
+    },
+    "garment_6d29ce62": {
+      "attack": "attack3"
+    },
+    "garment_8ec7fee0": {
+      "attack": "attack3"
+    },
+    "garment_9b96bad9": {
+      "attack": "attack2"
+    },
+    "garment_aeb84029": {
+      "attack": "attack2"
+    },
+    "garment_0b8a678d": {
+      "attack": "attack3"
+    },
+    "garment_4035571d": {
+      "attack": "attack3"
+    },
+    "garment_e7935661": {
+      "attack": "attack2"
+    },
+    "garment_ebcda60c": {
+      "attack": "attack2"
+    },
+    "garment_8a38b51d": {
+      "attack": "attack3"
+    },
+    "garment_0a4aef24": {
+      "attack": "attack3"
+    },
+    "garment_dcc2129e": {
+      "attack": "attack2"
+    },
+    "garment_b2ab27ce": {
+      "attack": "attack2"
+    },
+    "garment_dbc10bb7": {
+      "attack": "attack3"
+    },
+    "garment_41813cc5": {
+      "attack": "attack3"
+    },
+    "garment_c233160a": {
+      "attack": "attack2"
+    },
+    "garment_2a3cd771": {
+      "attack": "attack2"
+    },
+    "garment_00f58b19": {
+      "attack": "attack3"
+    },
+    "garment_a1292c28": {
+      "attack": "attack3"
+    },
+    "garment_8a0d6b7f": {
+      "attack": "attack2"
+    },
+    "garment_ffbd5dfc": {
+      "attack": "attack2"
+    },
+    "garment_dd0bc816": {
+      "attack": "attack3"
+    },
+    "garment_c905cf00": {
+      "attack": "attack3"
+    },
+    "garment_fcd9dc5f": {
+      "attack": "attack3"
+    },
+    "garment_7246f1b2": {
+      "attack": "attack2"
+    },
+    "garment_f91b5962": {
+      "attack": "attack2"
+    },
+    "garment_c47e8f1d": {
+      "attack": "attack3"
+    },
+    "garment_3e420267": {
+      "attack": "attack3"
+    },
+    "garment_8ac4fa9f": {
+      "attack": "attack2"
+    },
+    "garment_cfc762e7": {
+      "attack": "attack2"
+    },
+    "garment_0f992c3e": {
+      "attack": "attack3"
+    },
+    "garment_0babbfbc": {
+      "attack": "attack3"
+    },
+    "garment_52e253ab": {
+      "attack": "attack2"
+    },
+    "garment_aa271b39": {
+      "attack": "attack2"
+    },
+    "garment_e1188d61": {
+      "attack": "attack3"
+    },
+    "garment_8e23d985": {
+      "attack": "attack3"
+    },
+    "garment_7e72b3cc": {
+      "attack": "attack2"
+    },
+    "garment_eb8442f8": {
+      "attack": "attack2"
+    },
+    "garment_0751b3be": {
+      "attack": "attack3"
+    },
+    "garment_5a838d56": {
+      "attack": "attack3"
+    },
+    "garment_ce1b6fc5": {
+      "attack": "attack3"
+    },
+    "garment_a8b085cd": {
+      "attack": "attack2"
+    },
+    "garment_1ec31fb6": {
+      "attack": "attack2"
+    },
+    "body_5d652040": {
+      "attack": "attack2"
+    },
+    "body_a9bf994c": {
+      "attack": "attack2"
+    },
+    "weapon_233ed9d9": {
+      "attack": "attack2"
+    },
+    "weapon_bbfc06f5": {
+      "attack": "attack2"
+    },
+    "head_0080f5fa": {
+      "attack": "attack2"
+    },
+    "head_8fc5953d": {
+      "attack": "attack2"
+    }
+  }
+}

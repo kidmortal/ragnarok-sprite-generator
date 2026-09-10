@@ -1,3 +1,4 @@
+import { asDomCanvas } from "../lib/canvas";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   DIRECTIONS,
@@ -62,7 +63,7 @@ export function Stage({
       ctx.imageSmoothingEnabled = false;
       const source = rendered.frames[frame % rendered.frames.length];
       ctx.drawImage(
-        source,
+        asDomCanvas(source),
         Math.round((canvas.width - source.width * zoom) / 2),
         Math.round((canvas.height - source.height * zoom) / 2),
         source.width * zoom,

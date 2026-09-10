@@ -13,6 +13,7 @@
  */
 
 import fs from "node:fs/promises";
+import type { SheetCanvas } from "../src/lib/canvas.ts";
 import { parseSpr } from "../src/lib/spr.ts";
 import { parseAct } from "../src/lib/act.ts";
 import {
@@ -63,7 +64,7 @@ export async function loadPart(relative: string, kind: PartKind): Promise<Loaded
       width: Math.max(frame.width, 1),
       height: Math.max(frame.height, 1),
       pixels: frame.pixels,
-    })) as unknown as HTMLCanvasElement[]
+    })) as unknown as SheetCanvas[]
   );
   return { part, cache };
 }

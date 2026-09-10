@@ -1,3 +1,4 @@
+import { asDomCanvas, context2d, type SheetCanvas } from "./canvas";
 import { fetchFile } from "../api";
 import { parseSpr } from "./spr";
 import { parseAct } from "./act";
@@ -65,7 +66,7 @@ export function loadPartThumb(sprId: string, actId: string, tile = TILE): Promis
     });
 
     // Within that action, show whichever frame has the most to look at.
-    const source = frames.reduce<HTMLCanvasElement | null>((best, frame) => {
+    const source = frames.reduce<SheetCanvas | null>((best, frame) => {
       if (!frame.width || !frame.height) return best;
       if (!best) return frame;
       return opaquePixels(frame) > opaquePixels(best) ? frame : best;
@@ -79,7 +80,8 @@ export function loadPartThumb(sprId: string, actId: string, tile = TILE): Promis
     out.height = Math.max(Math.round(source.height * scale), 1);
     const ctx = out.getContext("2d")!;
     ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(source, 0, 0, out.width, out.height);
+    // Browser only, like the `toDataURL` below it.
+    ctx.drawImage(asDomCanvas(source), 0, 0, out.width, out.height);
 
     return { url: out.toDataURL("image/png"), width: out.width, height: out.height };
   });
@@ -126,7 +128,7 @@ function measure(url: string): Promise<{ width: number; height: number }> {
 }
 
 /** Rough "how much is drawn here" measure, used to pick a preview frame. */
-function opaquePixels(canvas: HTMLCanvasElement): number {
+function opaquePixels(canvas: SheetCanvas): number {
   const ctx = canvas.getContext("2d");
   if (!ctx) return 0;
   const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);

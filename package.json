@@ -9,6 +9,7 @@
     "dev:client": "vite",
     "build": "tsc -b && vite build",
     "thumbs": "tsx server/generate-thumbs.ts",
+    "overrides": "tsx server/seed-overrides.ts",
     "silhouettes": "tsx server/measure-silhouettes.ts",
     "contact-sheet": "tsx server/contact-sheet.ts",
     "start": "NODE_ENV=production tsx server/index.ts",
@@ -26,6 +27,7 @@
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.4",
     "concurrently": "^9.1.0",
+    "playwright": "^1.63.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
     "vite": "^5.4.11"

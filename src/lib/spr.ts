@@ -1,3 +1,5 @@
+import { context2d, createCanvas, createImageData, type SheetCanvas } from "./canvas";
+
 /**
  * Parser for Ragnarok-style .spr sprite files.
  *
@@ -130,13 +132,11 @@ function indexedToRgba(indices: Uint8Array, palette: Uint8Array | null): Uint8Cl
   return out;
 }
 
-export function frameToCanvas(frame: SprFrame): HTMLCanvasElement {
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.max(frame.width, 1);
-  canvas.height = Math.max(frame.height, 1);
-  const ctx = canvas.getContext("2d")!;
+export function frameToCanvas(frame: SprFrame): SheetCanvas {
+  const canvas = createCanvas(frame.width, frame.height);
+  const ctx = context2d(canvas);
   if (frame.width && frame.height) {
-    ctx.putImageData(new ImageData(frame.pixels, frame.width, frame.height), 0, 0);
+    ctx.putImageData(createImageData(frame.pixels, frame.width, frame.height), 0, 0);
   }
   return canvas;
 }

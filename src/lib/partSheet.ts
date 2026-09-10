@@ -16,6 +16,7 @@
  * aligned to the character origin and needs no correction at all.
  */
 
+import { context2d, createCanvas, type SheetCanvas } from "./canvas";
 import {
   MONSTER_ACTIONS,
   PLAYER_ACTIONS,
@@ -55,7 +56,7 @@ export type SheetAction = {
 
 export type PartSheet = {
   /** One canvas per cell, all exactly `cell` big. */
-  frames: HTMLCanvasElement[];
+  frames: SheetCanvas[];
   cell: { w: number; h: number };
   /**
    * The pixel inside a cell that anchors it. For an unparented part that is
@@ -169,10 +170,8 @@ export function renderPartSheet(
     };
 
     for (const ops of plan.frames) {
-      const canvas = document.createElement("canvas");
-      canvas.width = cell.w;
-      canvas.height = cell.h;
-      paintOps(canvas.getContext("2d")!, ops, origin[0], origin[1]);
+      const canvas = createCanvas(cell.w, cell.h);
+      paintOps(context2d(canvas), ops, origin[0], origin[1]);
       sheet.frames.push(canvas);
     }
   }
@@ -180,10 +179,7 @@ export function renderPartSheet(
   // A part that draws nothing anywhere still has to produce a texture, or the
   // packer has no frame size to work from.
   if (sheet.frames.length === 0) {
-    const canvas = document.createElement("canvas");
-    canvas.width = cell.w;
-    canvas.height = cell.h;
-    sheet.frames.push(canvas);
+    sheet.frames.push(createCanvas(cell.w, cell.h));
   }
 
   return sheet;

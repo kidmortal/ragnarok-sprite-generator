@@ -15,12 +15,36 @@ import {
   ROOT,
   THUMB_DIR,
 } from "./paths.ts";
+import { registerExportRoutes } from "./export-routes.ts";
 import { thumbFile, TILE } from "./thumbnail.ts";
 import { label } from "./translate.ts";
 
 const PORT = Number(process.env.PORT ?? 3001);
 
 const app = express();
+
+/**
+ * The headless half: a searchable catalogue and a render route, so a pipeline
+ * can ask for art without a browser in the middle of it. See `export-routes.ts`.
+ *
+ * `express.json` is scoped to it rather than mounted globally: every other
+ * route here either takes a query string or raw bytes, and a body parser in
+ * front of `/api/encode` would try to read a spritesheet as JSON.
+ */
+app.use("/api/export", express.json({ limit: "4mb" }));
+registerExportRoutes(app);
+
+/**
+ * A bare document on this origin, for the headless renderer to stand on.
+ *
+ * The harness fetches sprites from `/api/file` and encodes through
+ * `/api/encode` with relative URLs — the same code the app runs — so it has to
+ * be loaded from the server's own origin. `about:blank` is an opaque one and
+ * every fetch from it would fail.
+ */
+app.get("/api/render-harness", (_req, res) => {
+  res.type("html").send("<!doctype html><meta charset=utf-8><title>render harness</title>");
+});
 
 app.get("/api/parts", async (req, res) => {
   const race = RACES[(req.query.race as keyof typeof RACES) ?? "human"] ?? RACES.human;

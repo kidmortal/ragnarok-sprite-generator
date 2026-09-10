@@ -16,6 +16,7 @@
 import { createHash } from "node:crypto";
 import path from "node:path";
 import sharp from "sharp";
+import type { SheetCanvas } from "../src/lib/canvas.ts";
 import { parseSpr } from "../src/lib/spr.ts";
 import { parseAct } from "../src/lib/act.ts";
 import {
@@ -35,7 +36,16 @@ import {
 /** Tile size the client asks for; thumbnails are generated to fit it. */
 export const TILE = 64;
 
-/** A stand-in for the HTMLCanvasElement the compose module caches per frame. */
+/**
+ * A stand-in for the canvas the compose module caches per frame.
+ *
+ * **The server paints two different ways, on purpose.** This file is a build
+ * step - thousands of one-frame previews, rendered once and cached - and the
+ * rasteriser below is what a canvas does anyway with smoothing off, for none of
+ * the dependency. Shipped game art is drawn the other way, in a real browser
+ * (`server/browser-sheets.ts`), because there "near enough" is exactly what
+ * must not happen.
+ */
 type Bitmap = { width: number; height: number; pixels: Uint8ClampedArray };
 
 /** Where one part's thumbnail lives, sharded so no directory holds them all. */
@@ -70,7 +80,7 @@ export async function renderThumb(
       width: Math.max(frame.width, 1),
       height: Math.max(frame.height, 1),
       pixels: frame.pixels,
-    })) as unknown as HTMLCanvasElement[]
+    })) as unknown as SheetCanvas[]
   );
 
   const options: ComposeOptions = {

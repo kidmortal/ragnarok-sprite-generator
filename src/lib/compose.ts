@@ -1,3 +1,11 @@
+import {
+  context2d,
+  createCanvas,
+  createImageData,
+  type SheetCanvas,
+  type SheetContext,
+} from "./canvas";
+
 /**
  * Composes a character out of several .spr/.act pairs, following the same rules
  * as zrenderer (https://github.com/zhad3/zrenderer):
@@ -235,7 +243,7 @@ function anchorOffset(
 }
 
 export type DrawOp = {
-  canvas: HTMLCanvasElement;
+  canvas: SheetCanvas;
   x: number;
   y: number;
   scaleX: number;
@@ -246,7 +254,7 @@ export type DrawOp = {
 };
 
 /** Per-part cache of decoded frames, so scrubbing an animation is cheap. */
-export type FrameCache = Map<Part, HTMLCanvasElement[]>;
+export type FrameCache = Map<Part, SheetCanvas[]>;
 
 export function buildFrameCache(parts: Part[]): FrameCache {
   const cache: FrameCache = new Map();
@@ -254,13 +262,13 @@ export function buildFrameCache(parts: Part[]): FrameCache {
     cache.set(
       part,
       part.spr.frames.map((frame) => {
-        const canvas = document.createElement("canvas");
-        canvas.width = Math.max(frame.width, 1);
-        canvas.height = Math.max(frame.height, 1);
+        const canvas = createCanvas(frame.width, frame.height);
         if (frame.width && frame.height) {
-          canvas
-            .getContext("2d")!
-            .putImageData(new ImageData(frame.pixels, frame.width, frame.height), 0, 0);
+          context2d(canvas).putImageData(
+            createImageData(frame.pixels, frame.width, frame.height),
+            0,
+            0,
+          );
         }
         return canvas;
       })
@@ -410,7 +418,7 @@ export function actionBounds(parts: Part[], cache: FrameCache, options: ComposeO
  * (originX, originY) in destination pixels.
  */
 export function drawFrame(
-  ctx: CanvasRenderingContext2D,
+  ctx: SheetContext,
   parts: Part[],
   cache: FrameCache,
   options: ComposeOptions,
@@ -424,7 +432,7 @@ export function drawFrame(
 
 /** Paints draw ops with the character origin at (originX, originY). */
 export function paintOps(
-  ctx: CanvasRenderingContext2D,
+  ctx: SheetContext,
   ops: DrawOp[],
   originX: number,
   originY: number,
@@ -448,19 +456,17 @@ export function renderAction(
   cache: FrameCache,
   options: ComposeOptions,
   scale = 1
-): { frames: HTMLCanvasElement[]; width: number; height: number; delay: number } {
+): { frames: SheetCanvas[]; width: number; height: number; delay: number } {
   const bounds = actionBounds(parts, cache, options);
   const width = Math.max(Math.round((bounds.x2 - bounds.x1) * scale), 1);
   const height = Math.max(Math.round((bounds.y2 - bounds.y1) * scale), 1);
   const total = frameCount(parts, options);
 
-  const frames: HTMLCanvasElement[] = [];
+  const frames: SheetCanvas[] = [];
   for (let frame = 0; frame < total; frame++) {
-    const canvas = document.createElement("canvas");
-    canvas.width = width;
-    canvas.height = height;
+    const canvas = createCanvas(width, height);
     drawFrame(
-      canvas.getContext("2d")!,
+      context2d(canvas),
       parts,
       cache,
       options,

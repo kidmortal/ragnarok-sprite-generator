@@ -8,6 +8,7 @@
  * dispose=background/blend=source, so no inter-frame math is needed.
  */
 
+import { asDomCanvas, context2d, createCanvas, type SheetCanvas } from "./canvas";
 import { quantiseSheet } from "./quantise";
 
 const SIGNATURE = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
@@ -54,7 +55,9 @@ function makeChunk(type: string, data: Uint8Array): Uint8Array {
   return out;
 }
 
-function canvasToPngBytes(canvas: HTMLCanvasElement): Promise<Uint8Array> {
+function canvasToPngBytes(source: SheetCanvas): Promise<Uint8Array> {
+  // Browser only: an APNG is downloaded from a page, never rendered headlessly.
+  const canvas = asDomCanvas(source);
   return new Promise((resolve, reject) => {
     canvas.toBlob((blob) => {
       if (!blob) return reject(new Error("canvas encoding failed"));
@@ -71,7 +74,7 @@ export type ApngOptions = {
 };
 
 export async function encodeApng(
-  canvases: HTMLCanvasElement[],
+  canvases: SheetCanvas[],
   options: ApngOptions
 ): Promise<Blob> {
   if (canvases.length === 0) throw new Error("no frames to encode");
@@ -221,7 +224,7 @@ export type SheetOptions = {
  * sprites it has to sit out.
  */
 export async function encodeSpritesheet(
-  canvases: HTMLCanvasElement[],
+  canvases: SheetCanvas[],
   columns = canvases.length,
   options: SheetOptions = {}
 ): Promise<Sheet> {
@@ -232,12 +235,10 @@ export async function encodeSpritesheet(
   const cols = Math.max(Math.min(columns, canvases.length), 1);
   const rows = Math.ceil(canvases.length / cols);
 
-  const sheet = document.createElement("canvas");
-  sheet.width = frameWidth * cols;
-  sheet.height = frameHeight * rows;
+  const sheet = createCanvas(frameWidth * cols, frameHeight * rows);
   // The sheet is read back a frame later to be quantised, which is exactly the
   // pattern this hint exists for.
-  const ctx = sheet.getContext("2d", { willReadFrequently: true })!;
+  const ctx = context2d(sheet, { willReadFrequently: true });
   ctx.imageSmoothingEnabled = false;
   canvases.forEach((canvas, i) => {
     ctx.drawImage(canvas, (i % cols) * frameWidth, Math.floor(i / cols) * frameHeight);
