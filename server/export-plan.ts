@@ -64,9 +64,29 @@ export const HEAD_STRAIGHT = 0;
  * `move` is left out of the monster list for the same reason `stand` leaves the
  * player one: nothing plays it, and an action nobody plays is pure weight in
  * every sheet that carries it.
+ *
+ * **`sit` replaced `walk`, and it ships one frame.** A character in this realm
+ * holds their ground: they are seen standing ready, swinging, casting, flinching
+ * and falling, and never once crossing the ground, so a walk cycle was eight
+ * frames of nothing in every body, head, headgear, weapon, shield and garment in
+ * the library. What is wanted instead is a character *at rest* - a portrait
+ * pose for a picker, a lobby, a page where nobody is fighting - and that is sit.
+ * One frame because it is a pose held rather than an animation played: RO's sit
+ * is a short cycle of somebody settling, and the seated figure is its first
+ * frame. See `FRAME_CAPS`.
  */
-export const PLAYER_ACTION_SLUGS = ["idle", "walk", "hurt", "dead", "skill"] as const;
+export const PLAYER_ACTION_SLUGS = ["idle", "sit", "hurt", "dead", "skill"] as const;
 export const MONSTER_ACTION_SLUGS = ["stand", "attack", "hurt", "dead"] as const;
+
+/**
+ * Poses that ship a fixed number of frames whatever their act runs for.
+ *
+ * One entry, and the rule it states is about the pose rather than about size:
+ * `sit` is *held*, so what an export owes a consumer is the figure and not the
+ * business of getting into it. A consumer that received the cycle would have to
+ * know to stop it on frame one, which is a rule in the wrong repository.
+ */
+const FRAME_CAPS: Record<string, number> = { sit: 1 };
 
 /** Which of RO's three attack poses an export may be told to use. */
 export const ATTACK_VARIANTS = ["attack", "attack2", "attack3"] as const;
@@ -158,8 +178,8 @@ export function specsFor(
 
   // **Laid out in the catalogue's order, not the order they were asked for.**
   // A sheet's frames are packed in spec order, so the order *is* part of the
-  // art: `stand, walk, idle, attack, hurt, dead, skill` is where every sheet
-  // Ilumnia ships put its frames, and a list that merely contained the same
+  // art: `sit, idle, attack, hurt, dead, skill` is where every player sheet
+  // Ilumnia ships puts its frames, and a list that merely contained the same
   // slugs in a different order would re-cut every sheet in the library for
   // nothing. Sorted by the slug's own place in the RO action table - which is
   // where `attack` sits whatever pose it was actually taken from.
@@ -179,7 +199,8 @@ export function specsFor(
     // A sprite whose act is short simply has nothing at that base; the renderer
     // would draw an empty action, so it is left out of the sheet entirely.
     if (base === undefined) continue;
-    specs.push({ slug, base });
+    const cap = FRAME_CAPS[slug];
+    specs.push(cap === undefined ? { slug, base } : { slug, base, frames: cap });
   }
 
   return {

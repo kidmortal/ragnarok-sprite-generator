@@ -37,7 +37,22 @@ import {
 /** Columns a packed sheet uses; 8 keeps a walk cycle on one row. */
 export const SHEET_COLUMNS = 8;
 
-export type SheetActionSpec = { slug: string; base: number };
+export type SheetActionSpec = {
+  slug: string;
+  base: number;
+  /**
+   * At most this many frames, whatever the act runs for.
+   *
+   * For a pose that is *held* rather than played. RO's sit is a short loop of a
+   * character settling, and what a consumer wants out of it is the seated
+   * figure - so the export takes the first frame and stops, rather than
+   * shipping a cycle every caller would have to know to freeze.
+   *
+   * Absent on every action that is really an animation, which is nearly all of
+   * them: a cap is a statement about the pose, not a size limit.
+   */
+  frames?: number;
+};
 
 export type SheetAction = {
   /** The `PLAYER_ACTIONS` base this came from, for cross-referencing. */
@@ -125,7 +140,11 @@ export function renderPartSheet(
 
   for (const spec of specs) {
     const options = { actionBase: spec.base, direction, headDirection };
-    const count = ownFrameCount(part, options);
+    // The part's own length, held to whatever the spec will take - see
+    // `SheetActionSpec.frames`. Capped here rather than trimmed afterwards so a
+    // frame nobody ships is a frame nobody draws, measures or packs.
+    const own = ownFrameCount(part, options);
+    const count = spec.frames === undefined ? own : Math.min(own, spec.frames);
     const frames: DrawOp[][] = [];
     const anchors: [number, number][] = [];
 
