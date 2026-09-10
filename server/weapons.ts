@@ -20,6 +20,7 @@
 import fs from "node:fs/promises";
 import { foldersForJob } from "./resolver.ts";
 import { displayName, encodeId, join, resolveId } from "./paths.ts";
+import { label } from "./translate.ts";
 
 /**
  * Character part folders, using the standard Ragnarok data layout. Gender and
@@ -32,7 +33,27 @@ export const RACES = {
 
 export const GENDERS = { male: "남", female: "여" } as const;
 
-export type PartEntry = { name: string; sprId: string; actId: string };
+export type PartEntry = {
+  /** The file's own name, which is its identity -- see `translate.ts`. */
+  name: string;
+  /**
+   * The same name in English, or "" when it needs none. Display only: the data
+   * directory is a GRF extract and nothing here renames anything on disk.
+   */
+  label: string;
+  sprId: string;
+  actId: string;
+};
+
+/** What kind of part a folder holds, which is what `translate.ts` needs to know. */
+export type PartLabelKind =
+  | "body"
+  | "head"
+  | "headgear"
+  | "weapon"
+  | "shield"
+  | "garment"
+  | "monster";
 
 /**
  * Where a body's weapons came from, most trustworthy first.
@@ -54,7 +75,10 @@ export type WeaponOrigin = "own" | "descendant" | "override" | "inherited" | "pr
 export const TRUSTED: readonly WeaponOrigin[] = ["own", "descendant", "override"];
 
 /** List a folder and pair each .spr with the .act of the same base name. */
-export async function listParts(relative: string): Promise<PartEntry[]> {
+export async function listParts(
+  relative: string,
+  kind: PartLabelKind = "monster"
+): Promise<PartEntry[]> {
   const rel = Buffer.from(relative);
   let abs: Buffer;
   try {
@@ -84,7 +108,7 @@ export async function listParts(relative: string): Promise<PartEntry[]> {
     if (!acts.has(base.toLowerCase())) continue; // a part needs both halves
     const sprRel = join(rel, name);
     const actRel = Buffer.concat([sprRel.subarray(0, sprRel.length - 4), Buffer.from(".act")]);
-    parts.push({ name: base, sprId: encodeId(sprRel), actId: encodeId(actRel) });
+    parts.push({ name: base, label: label(base, kind), sprId: encodeId(sprRel), actId: encodeId(actRel) });
   }
 
   return parts.sort((a, b) => a.name.localeCompare(b.name, "ko"));
@@ -182,7 +206,7 @@ export async function weaponsForBody(
   const listCached = (relative: string) => {
     let pending = folders.get(relative);
     if (!pending) {
-      pending = listParts(relative);
+      pending = listParts(relative, "weapon");
       folders.set(relative, pending);
     }
     return pending;

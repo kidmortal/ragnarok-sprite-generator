@@ -33,10 +33,13 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { displayName, encodeId, join, resolveId, ROOT } from "./paths.ts";
+import { label } from "./translate.ts";
 
-export type PetAccessory = { name: string; sprId: string; actId: string };
+export type PetAccessory = { name: string; label: string; sprId: string; actId: string };
 export type PetEntry = {
   name: string;
+  /** The name in English, or "" when it needs none. Display only. */
+  label: string;
   sprId: string;
   actId: string;
   /** The same pet wearing its equipment, or null when the data has no such act. */
@@ -251,6 +254,7 @@ export async function listPets(): Promise<PetEntry[]> {
     const accessorySpr = sprs.get(actName) ?? sprs.get(base)!;
     found.set(base, {
       name: accessoryName,
+      label: label(accessoryName, "monster"),
       sprId: encodeId(join(dir, accessorySpr)),
       actId: encodeId(join(dir, actFile)),
     });
@@ -269,6 +273,7 @@ export async function listPets(): Promise<PetEntry[]> {
     }
     pets.push({
       name: base,
+      label: label(base, "monster"),
       sprId: encodeId(join(dir, sprs.get(base)!)),
       actId: encodeId(join(dir, acts.get(base)!)),
       accessory,

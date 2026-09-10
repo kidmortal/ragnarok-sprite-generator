@@ -26,9 +26,13 @@ export function PartPicker({ label, entries, value, onChange, optional, aside }:
   const [shown, setShown] = useState(PAGE);
   const { ref: sentinelRef, inView: sentinelInView } = useInView<HTMLDivElement>("200px", false);
 
+  // Matched against both spellings, so a part is reachable by its Korean name
+  // and by whatever `translate.ts` made of it -- an English item name where the
+  // client's tables knew the item, a romanisation where they did not.
   const matches = useMemo(() => {
     const needle = filter.trim().toLowerCase();
-    return needle ? entries.filter((e) => e.name.toLowerCase().includes(needle)) : entries;
+    if (!needle) return entries;
+    return entries.filter((e) => `${e.name} ${e.label}`.toLowerCase().includes(needle));
   }, [entries, filter]);
 
   useEffect(() => setShown(PAGE), [filter, entries]);
@@ -107,12 +111,13 @@ function PartTile({
       ref={ref}
       className={`tile${selected ? " on" : ""}`}
       onClick={onSelect}
-      title={entry.name}
+      title={entry.label ? `${entry.label}\n${entry.name}` : entry.name}
     >
       <div className="tile-preview">
         {thumb ? <img src={thumb.url} alt="" /> : failed ? <span className="error">!</span> : null}
       </div>
-      <span className="tile-name">{entry.name}</span>
+      <span className="tile-name">{entry.label || entry.name}</span>
+      {entry.label ? <span className="tile-subname">{entry.name}</span> : null}
     </button>
   );
 }

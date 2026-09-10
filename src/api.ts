@@ -4,7 +4,14 @@ export async function fetchFile(id: string): Promise<ArrayBuffer> {
   return res.arrayBuffer();
 }
 
-export type PartEntry = { name: string; sprId: string; actId: string };
+export type PartEntry = {
+  /** The file's own name, in Korean where the extract is Korean. */
+  name: string;
+  /** The same name in English, or "" when it needs none. Display only. */
+  label: string;
+  sprId: string;
+  actId: string;
+};
 
 /**
  * Where a body's weapons came from. Provenance, not proof: nothing in a sprite
@@ -65,7 +72,7 @@ export async function fetchMonsters(): Promise<PartEntry[]> {
   return res.json();
 }
 
-export type PetAccessory = { name: string; sprId: string; actId: string };
+export type PetAccessory = PartEntry;
 /**
  * A pet is a monster sprite that also ships an act of itself wearing its
  * equipment; that act usually shares the pet's `.spr`. See `server/pets.ts`.

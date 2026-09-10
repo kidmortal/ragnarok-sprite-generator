@@ -1,0 +1,116 @@
+# Korean sprite-name words, in English. Hand-written; everything else comes
+# from a table or falls back to romanisation.
+#
+# Format: <korean> <TAB> <english> [<TAB> <scope>]
+#
+# Scope limits a word to one kind of part, for the few that mean different
+# things in different folders: 가드 names the Royal Guard job on a body and a
+# plain guard on a weapon. Without a scope a word applies everywhere. Matching
+# is longest-first over the whole name, so 양손도끼 wins over 도끼 and only the
+# pieces that make up a compound need to be listed -- 단검광 falls out of
+# 단검 + 광 on its own.
+
+# --- weapon and shield classes ---
+검	Sword
+단검	Dagger
+양손검	Two-Handed Sword
+도끼	Axe
+양손도끼	Two-Handed Axe
+창	Spear
+양손창	Two-Handed Spear
+클럽	Club
+둔기	Mace
+해머	Hammer
+지팡이	Staff
+롯드	Rod
+캔디케인	Candy Cane
+카타르	Katar
+활	Bow
+석궁	Crossbow
+책	Book
+너클	Knuckle
+채찍	Whip
+악기	Instrument
+수리검	Shuriken
+권총	Revolver
+기관총	Gatling Gun
+샷건	Shotgun
+라이플	Rifle
+런처	Launcher
+해동검	Haedonggum
+프리스트의검	Priest's Sword
+매드바니	Mad Bunny
+방패	Shield
+쉴드	Shield
+미러쉴드	Mirror Shield
+버클러	Buckler
+가드	Guard	weapon
+# The trail a swung weapon leaves; it ships as its own sprite beside the
+# weapon, so 검광 is 검 + 광 and 단검광 is 단검 + 광.
+광	Glow
+발광	Glow
+
+# --- mounts and animal forms ---
+페코페코	Peco Peco
+페코	Peco
+신페코	Grand Peco
+구페코	Old Peco
+사자	Lion
+그리폰	Griffon
+켈베로스	Cerberus
+타조	Ostrich
+여우	Fox
+두꺼비	Toad
+알파카	Alpaca
+멧돼지	Boar
+해태	Haetae
+포링	Poring
+늑대	Wolf
+쁘띠	Petite
+마도기어	Madogear
+마도아머	Mado Armour
+탈것	Mount
+
+# --- costumes and body variants ---
+결혼	Wedding
+웨딩	Wedding
+한복	Hanbok
+턱시도	Tuxedo
+산타	Santa
+여름	Summer
+옥토버패스트	Oktoberfest
+운영자	GM
+댄서	Dancer
+바지	Trousers
+몸통	Body
+머리통	Head
+악세사리	Headgear
+완성	Complete
+용병	Mercenary
+
+# --- job names the client's own job table does not carry ---
+로얄가드	Royal Guard
+임페리얼가드	Imperial Guard
+드래곤나이트	Dragon Knight
+인퀴지터	Inquisitor
+리벨리온	Rebellion
+성투사	Star Gladiator
+짚시	Gypsy
+가드	Royal Guard	body
+
+# --- headgear words, the commonest ones the item table does not reach ---
+모자	Hat
+투구	Helmet
+머리띠	Headband
+안경	Glasses
+가면	Mask
+왕관	Crown
+날개	Wings
+리본	Ribbon
+고글	Goggles
+헤드폰	Headphones
+반다나	Bandana
+베레모	Beret
+밀짚모자	Straw Hat
+주년	Anniversary
+길로틴크로스	Guillotine Cross

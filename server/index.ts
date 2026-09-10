@@ -16,6 +16,7 @@ import {
   THUMB_DIR,
 } from "./paths.ts";
 import { thumbFile, TILE } from "./thumbnail.ts";
+import { label } from "./translate.ts";
 
 const PORT = Number(process.env.PORT ?? 3001);
 
@@ -26,9 +27,9 @@ app.get("/api/parts", async (req, res) => {
   const gender = GENDERS[(req.query.gender as keyof typeof GENDERS) ?? "male"] ?? GENDERS.male;
 
   const [allBodies, heads, headgears] = await Promise.all([
-    listParts(`${race.root}/몸통/${gender}`),
-    listParts(`${race.root}/머리통/${gender}`),
-    listParts(`악세사리/${gender}${race.headgearSuffix}`),
+    listParts(`${race.root}/몸통/${gender}`, "body"),
+    listParts(`${race.root}/머리통/${gender}`, "head"),
+    listParts(`악세사리/${gender}${race.headgearSuffix}`, "headgear"),
   ]);
 
   // Only offer bodies whose class actually has weapon sprites. The folder
@@ -102,7 +103,7 @@ app.get("/api/equipment", async (req, res) => {
     new Map()
   );
 
-  const shieldFiles = await listParts(`방패/${job}`);
+  const shieldFiles = await listParts(`방패/${job}`, "shield");
   const shieldPrefixLower = `${job}_${gender}`.toLowerCase();
   const shields = shieldFiles.filter((p) => p.name.toLowerCase().startsWith(shieldPrefixLower));
 
@@ -118,12 +119,12 @@ app.get("/api/equipment", async (req, res) => {
       folders.map(async (folder) => {
         if (!folder.isDirectory()) return null;
         const name = displayName(folder.name as unknown as Buffer);
-        const perJob = await listParts(`로브/${name}/${gender}`);
+        const perJob = await listParts(`로브/${name}/${gender}`, "garment");
         const match = perJob.find((p) => p.name.toLowerCase() === `${job}_${gender}`.toLowerCase());
-        if (match) return { ...match, name };
-        const shared = await listParts(`로브/${name}`);
+        if (match) return { ...match, name, label: label(name, "garment") };
+        const shared = await listParts(`로브/${name}`, "garment");
         const fallback = shared.find((p) => p.name.toLowerCase() === name.toLowerCase());
-        return fallback ? { ...fallback, name } : null;
+        return fallback ? { ...fallback, name, label: label(name, "garment") } : null;
       })
     );
     garments = found.filter((entry): entry is PartEntry => entry !== null);
@@ -235,7 +236,7 @@ app.post(
 
 /** Monster sprites are standalone `.spr`/`.act` pairs in `몬스터/`. */
 app.get("/api/monsters", async (_req, res) => {
-  res.json(await listParts("몬스터"));
+  res.json(await listParts("몬스터", "monster"));
 });
 
 /**

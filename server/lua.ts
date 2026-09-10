@@ -128,13 +128,20 @@ const OP_NEWTABLE = 10;
 
 type Slot = { kind: "constant" | "global" | "index" | "table"; value: unknown; id?: number };
 
+/** A table stored as another table's value, resolved after the walk. */
+type Nested = { nestedTable: number };
+const isNested = (value: unknown): value is Nested =>
+  typeof value === "object" && value !== null && "nestedTable" in value;
+
+export type LuaTable = Map<string, unknown>;
+
 /**
  * Every global table the chunk defines, as `name -> (key -> value)`.
  *
  * Keys are stringified: a key written `JOBID.JT_NOVICE` comes back as exactly
  * that, since the constant it resolves to lives in a different chunk.
  */
-export function readTables(file: string): Map<string, Map<string, unknown>> {
+export function readTables(file: string): Map<string, LuaTable> {
   const entriesById = new Map<number, Map<string, unknown>>();
   const nameById = new Map<number, string>();
   let nextId = 0;
@@ -171,7 +178,18 @@ export function readTables(file: string): Map<string, Map<string, unknown>> {
       } else if (op === OP_SETTABLE) {
         const target = registers[a];
         if (target?.kind === "table" && target.id !== undefined) {
-          entriesById.get(target.id)!.set(String(rk(b).value), rk(c).value);
+          // A value that is itself a table is kept as a reference and resolved
+          // below: item tables are one row of fields per item id, and the row
+          // is built and filled before it is assigned into its parent.
+          const value = rk(c);
+          entriesById
+            .get(target.id)!
+            .set(
+              String(rk(b).value),
+              value.kind === "table" && value.id !== undefined
+                ? ({ nestedTable: value.id } satisfies Nested)
+                : value.value
+            );
         }
       }
     }
@@ -179,10 +197,22 @@ export function readTables(file: string): Map<string, Map<string, unknown>> {
   };
   visit(loadChunk(file));
 
-  const tables = new Map<string, Map<string, unknown>>();
+  // Splice nested tables into their parents. Generated data has no cycles, but
+  // a malformed chunk should not be able to spin here.
+  const resolve = (entries: LuaTable, seen: Set<number>): LuaTable => {
+    for (const [key, value] of entries) {
+      if (!isNested(value)) continue;
+      const id = value.nestedTable;
+      const child = entriesById.get(id);
+      entries.set(key, child && !seen.has(id) ? resolve(child, new Set(seen).add(id)) : null);
+    }
+    return entries;
+  };
+
+  const tables = new Map<string, LuaTable>();
   for (const [id, entries] of entriesById) {
     const name = nameById.get(id);
-    if (name && entries.size) tables.set(name, entries);
+    if (name && entries.size) tables.set(name, resolve(entries, new Set([id])));
   }
   return tables;
 }

@@ -122,3 +122,42 @@ the misses: they are mobs whose sprite is spelled differently (`CHONCHON` is
 
 To regenerate, pull both files and take the `Mob` / `EquipItem` pairs, including
 the commented block.
+
+## Names for the picker — `item_names.txt` and `glossary.txt`
+
+The data directory is a GRF extract, so its file names are Korean and they are
+the only handle anything has on a file. Renaming them is not an option. These
+two tables give the picker a second string to *show* and to search; nothing in
+`translate.ts` touches a path or an id.
+
+`item_names.txt` is `<item id> <TAB> <resource name> <TAB> <English name>`,
+regenerated from a client's own English item table:
+
+```
+npx tsx server/extract-item-names.ts "/mnt/c/Gravity/Ragnarok/System"
+```
+
+It reads `System/english/iteminfo_new.lub` when the client ships one, which is
+why the English is the client's rather than ours. Sprite files name items two
+different ways and the table answers both: weapons and shields carry the item
+*id* (`크루세이더_남_1116`), headgears carry the *resource name* (`까마귀모자_남`).
+A row with an empty third column has no English name in that client and keeps
+its resource name, which romanises to something more useful than a bare id.
+
+Reading it needs the nested-table support in `lua.ts` — the item table is a row
+of fields per item, not the flat `Table[KEY] = "value"` the job tables use.
+
+`glossary.txt` is hand-written, for the words no table carries: weapon classes,
+mounts, costumes, and the handful of jobs the client's job table misses. Words
+are matched longest-first over a whole name, because Korean sprite names run
+their words together — `켈베로스길로틴크로스` is a Cerberus and a Guillotine
+Cross with nothing between them. Only the pieces of a compound need listing:
+`단검광` falls out of `단검` + `광` on its own. A third column scopes a word to
+one kind of part, for the few that are ambiguous: `가드` is the Royal Guard job
+on a body and a plain guard on a weapon.
+
+Anything none of that reaches is romanised (`server/romanise.ts`), so every
+part is reachable from a Latin keyboard even when nothing could translate it.
+Measured over 5,999 files: 3,455 were already Latin, 1,868 translate, 676 come
+out partly romanised. By kind, the Korean names translate at 99–100% for
+weapons and shields, 94% for bodies, and 63% for headgears.

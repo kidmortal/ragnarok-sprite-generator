@@ -149,7 +149,7 @@ h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: v
 }
 .tile {
   width: 64px;
-  height: 64px;
+  height: 74px;
   box-sizing: border-box;
 
   background: none;
@@ -195,6 +195,19 @@ h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: v
   white-space: nowrap;
 }
 .tile.on .tile-name { color: var(--text); }
+
+/* The name as it is on disk, under the English one. Korean where the extract is
+   Korean -- it is the file's identity, and the label above it is only a label. */
+.tile-subname {
+  font-size: 8px;
+  color: var(--muted);
+  opacity: 0.65;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tile.on .tile-subname { opacity: 0.9; }
 
 .panel select, .stage-panel select, .picker select {
   background: var(--bg);
@@ -299,9 +312,10 @@ h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: v
   grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
   max-height: 260px;
 }
-.tile-grid.small .tile { width: 52px; height: 66px; }
+.tile-grid.small .tile { width: 52px; height: 74px; }
 .tile-grid.small .tile-preview { max-width: 48px; }
 .tile-grid.small .tile-name { font-size: 9px; }
+.tile-grid.small .tile-subname { font-size: 8px; }
 
 .linkish {
   background: none;

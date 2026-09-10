@@ -105,6 +105,11 @@ So `job_weapon_names.txt` cannot be regenerated. It stays hand-corrected.
 | `server/silhouette-table.ts` | reads that table at startup; `isNarrow()` |
 | `server/contact-sheet.ts` | renders bodies wearing their weapons (`npm run contact-sheet`) |
 | `server/resolver-data/narrow_bodies.txt` | 18 measured rows + a hand-marked section |
+| `server/romanise.ts` | Hangul → Latin transliteration, the fallback for untranslated names |
+| `server/translate.ts` | English labels for sprite file names; display only |
+| `server/extract-item-names.ts` | → `resolver-data/item_names.txt` from the client's English item table |
+| `server/resolver-data/item_names.txt` | 16,937 rows: item id, resource name, English name |
+| `server/resolver-data/glossary.txt` | hand-written Korean → English for what no table carries |
 
 ### Modified
 
@@ -224,6 +229,28 @@ it — on `가드_남_1` next to `크루세이더_남` the gap is unmistakable.
 Note the labels render Korean as boxes unless sharp finds a CJK font. The
 picture is the point; the rows come out in the order given.
 
+## Picker labels
+
+The extract's names are Korean and are the only handle on a file, so they stay
+exactly as they are on disk. Every part now carries a `label` beside its `name`
+— shown in the tile, with the Korean underneath, and both are searched. See
+`resolver-data/README.md` for the tables and how to regenerate them.
+
+Coverage over 5,999 files: 3,455 already Latin, 1,868 translated, 676 partly
+romanised. Weapons and shields 99–100%, bodies 94%, headgears 63%; monsters were
+already Latin. Whatever fails to translate is romanised, so it is still typeable.
+
+Worth knowing:
+
+- `lua.ts` now descends into nested tables. The item table is a row of fields
+  per item, not the flat `Table[KEY] = "value"` shape the job tables use.
+- Item ids are only read as ids for weapons and shields. Elsewhere a number is
+  part of the name — the garment `2018_rtc_cape1` is a year, and item 2018 is a
+  staff.
+- A one-syllable glossary word only matches as a suffix, unless the whole token
+  is accounted for by known words. Otherwise `귀` ("ear") eats a syllable of
+  `까마귀` ("crow"), while `광` still resolves `검광` to "Sword Glow".
+
 ## Still open
 
 - The 2–2.5px band is six bodies wide and only partly reviewed. Render it and
@@ -231,6 +258,8 @@ picture is the point; the rows come out in the order given.
 - Only `attack wait` frame 0 is measured. A body that fits at rest and not
   mid-swing would pass. No evidence yet that any does.
 - Doram bodies are not measured at all — the sweep is `인간족` only.
+- 614 headgear names have no English in the client's table and come out partly
+  romanised. Extending `glossary.txt` is the cheap way to chip at that.
 
 ## Environment notes
 
