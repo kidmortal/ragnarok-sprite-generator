@@ -9,6 +9,8 @@
     "dev:client": "vite",
     "build": "tsc -b && vite build",
     "thumbs": "tsx server/generate-thumbs.ts",
+    "silhouettes": "tsx server/measure-silhouettes.ts",
+    "contact-sheet": "tsx server/contact-sheet.ts",
     "start": "NODE_ENV=production tsx server/index.ts",
     "preview": "vite preview"
   },

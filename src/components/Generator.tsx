@@ -29,9 +29,12 @@ async function loadPart(entry: PartEntry, kind: PartKind, zIndex: number): Promi
 }
 
 export function Generator() {
-  // Hides bodies whose weapons are only inherited from another job -- see
-  // `WeaponOrigin` in server/index.ts. It filters by how the mapping was
-  // derived, which is knowable; it cannot check that a pairing looks right.
+  // Hides bodies whose weapons are only inherited from another job, and bodies
+  // too small for the art they were given -- see `WeaponOrigin` in
+  // server/weapons.ts and `narrow_bodies.txt`. Between them those cover how the
+  // mapping was derived and whether the body is the shape the art expects;
+  // neither can tell you a pairing looks right, only that it has no known
+  // reason to look wrong.
   const [ownWeaponsOnly, setOwnWeaponsOnly] = useState(false);
   const [race, setRace] = useState("human");
   const [gender, setGender] = useState("male");
@@ -52,7 +55,10 @@ export function Generator() {
   });
 
   const bodies = useMemo(
-    () => (ownWeaponsOnly ? (catalog?.bodies ?? []).filter((b) => b.trusted) : catalog?.bodies ?? []),
+    () =>
+      ownWeaponsOnly
+        ? (catalog?.bodies ?? []).filter((b) => b.trusted && b.fits)
+        : catalog?.bodies ?? [],
     [catalog, ownWeaponsOnly]
   );
 
@@ -193,7 +199,7 @@ export function Generator() {
               value={body}
               onChange={setBody}
               aside={
-                <label className="picker-toggle" title="Hide bodies whose weapons are only inherited from an ancestor class, or guessed from the folder layout">
+                <label className="picker-toggle" title="Hide bodies whose weapons are only inherited from an ancestor class or guessed from the folder layout, and bodies too small for the art they are given">
                   <input
                     type="checkbox"
                     checked={ownWeaponsOnly}

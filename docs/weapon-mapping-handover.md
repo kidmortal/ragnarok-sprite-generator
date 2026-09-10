@@ -1,7 +1,6 @@
 # Weapon mapping — handover
 
-Context for continuing the body×weapon work. Everything below is **uncommitted**
-in the working tree.
+Context for continuing the body×weapon work.
 
 ## The original complaint
 
@@ -37,10 +36,12 @@ The Abyss Chaser fix *is* real — `abyss_chaser` shares nothing with `초보자
 and so is the `peco_rebellion` fix (`초보자` → `rebellion`). Treat the rest of the
 remap as cosmetic until proven otherwise.
 
-## Current unresolved bug
+## The original unresolved bug — now hand-marked
 
 `가드_남_1` (Royal Guard armour variant) renders a floating sword. **This is not
-a mapping bug and cannot be fixed by remapping.**
+a mapping bug and cannot be fixed by remapping.** It is hidden by the picker's
+filter via the hand-marked section of `narrow_bodies.txt`, because the width
+check cannot reach it — see "The width check" below.
 
 - `가드` = `JT_ROYAL_GUARD`, job id 4066 (confirmed from the client's own tables).
 - There is no Royal Guard weapon art anywhere; `로얄가드/` is a copy of `크루세이더/`.
@@ -49,7 +50,7 @@ a mapping bug and cannot be fixed by remapping.**
   `_3` 46, `_4` 52. `_1` is ~7px narrower, so the hilt hangs past the hand.
 - The real client renders it identically — it resolves to the same file.
 
-## Do not retry these — four failed validators
+## Do not retry these — five failed validators
 
 There is no signal inside a `.spr`/`.act` saying which body it was drawn for.
 Attempts, all rejected with evidence:
@@ -63,11 +64,14 @@ Attempts, all rejected with evidence:
    body, both visually wrong.
 4. **Weapon/body pixel overlap ratio** — scores `크루세이더_남_검` (correct) at
    24 frames with zero overlap. No better than the others.
+5. **Grip-band reach** (body reach measured only across the rows the hilt
+   occupies) — the intuitive refinement of the width check, and *worse* than it:
+   the band lands on a mount's neck as readily as on an arm, so it scored
+   `가드_남_1` at 3 in a crowd of correct bodies at 7–11. Not shipped; the
+   plain width test below is the one that works.
 
-Only reliable check so far: **render it and look.** Scratch renderer pattern is
-in the session scratchpad; it reuses `drawOpsForPart` + a nearest-neighbour
-rasteriser (there is no canvas in node — see `server/thumbnail.ts` for the same
-trick).
+Only reliable check: **render it and look.** That is now
+`npm run contact-sheet` (see below) rather than a scratch script.
 
 ## Where the mapping actually lives
 
@@ -82,7 +86,7 @@ trick).
 
 So `job_weapon_names.txt` cannot be regenerated. It stays hand-corrected.
 
-## Code state (all uncommitted)
+## Code state
 
 ### Added
 
@@ -95,15 +99,23 @@ So `job_weapon_names.txt` cannot be regenerated. It stays hand-corrected.
 | `server/resolver-data/job_weapon_overrides.txt` | 2 hand-checked rows, evidence inline |
 | `server/resolver-data/pc_jobs.txt` | id, `JT_` constant, English name, sprite name |
 | `src/lib/imf.ts` | `.imf` parser + `weaponInFront()` |
+| `server/weapons.ts` | weapon resolution, lifted out of `index.ts` so the offline tools resolve a body exactly as the server does |
+| `server/silhouette.ts` | outline measurement: extents, reach, narrowing |
+| `server/measure-silhouettes.ts` | → `resolver-data/narrow_bodies.txt` (`npm run silhouettes`) |
+| `server/silhouette-table.ts` | reads that table at startup; `isNarrow()` |
+| `server/contact-sheet.ts` | renders bodies wearing their weapons (`npm run contact-sheet`) |
+| `server/resolver-data/narrow_bodies.txt` | 18 measured rows + a hand-marked section |
 
 ### Modified
 
-`server/index.ts` (`weaponsForBody`, `descendantFolder`, `imfIdForBody`,
-`WeaponOrigin`), `server/resolver.ts` (override table, repeated-row tie-break,
-`imfName`), `src/lib/compose.ts` (per-frame weapon z-index),
+`server/index.ts` (`imfIdForBody`, and `fits` on each body; `weaponsForBody`,
+`descendantFolder` and `WeaponOrigin` now live in `weapons.ts`),
+`server/thumbnail.ts` (`paintOps` exported, so the contact sheet reuses the
+rasteriser rather than carrying a second one), `server/resolver.ts` (override
+table, repeated-row tie-break, `imfName`), `src/lib/compose.ts` (per-frame weapon z-index),
 `src/components/Generator.tsx`, `src/components/PartPicker.tsx` (`aside` prop),
-`src/api.ts`, `src/styles.css`, both READMEs, `imf_names.txt`,
-`job_weapon_names.txt`.
+`src/api.ts` (`fits` on `BodyEntry`), `src/styles.css`, both READMEs,
+`imf_names.txt`, `job_weapon_names.txt`, `package.json` (two scripts).
 
 **Pre-existing edits not mine, leave alone:** `ExportTab.tsx`, `Stage.tsx`,
 `apng.ts`, `partExport.ts` (and `compose.ts` had prior edits too).
@@ -134,29 +146,91 @@ it is a GRF extract and must not otherwise be modified.
 
 ## The checkbox ("Own weapon sprites only")
 
-Shipped and working, but it filters **provenance, not correctness** —
-`own` / `descendant` / `override` shown, `inherited` / `probe` hidden.
-155 of 213 male bodies pass.
+It filters **provenance, not correctness** — `own` / `descendant` / `override`
+shown, `inherited` / `probe` hidden.
 
-Two known weaknesses:
+It now requires `trusted && fits`: provenance *and* silhouette. 146 of 213 male
+bodies pass (was 155 on provenance alone), 145 of 215 female.
 
-1. **Conservative** — hides pairings that are fine. `팔라딘`→`크루세이더` is
-   hidden as inherited but renders correctly (trans-2nd-job reskin on the same rig).
-2. **Blind to the real bug** — `가드` passes as `override` yet `가드_남_1` still
-   looks wrong, because the problem is body silhouette, not folder choice.
+One known weakness remains:
 
-## Open decision — next step
+- **Conservative** — hides pairings that are fine. `팔라딘`→`크루세이더` is
+  hidden as inherited but renders correctly (trans-2nd-job reskin on the same rig).
 
-Pick one:
+The second weakness is fixed: `가드` still passes as `override`, but `가드_남_1`
+now fails on `fits`.
 
-1. **Body-width check.** Flag bodies materially narrower than the canonical body
-   their weapon art was drawn for. Catches `가드_남_1` (39 vs 46), leaves `_2`/`_3`/`_4`.
-   Cheap; it's a proxy for arm reach, so **validate on a sample before trusting it**
-   (four heuristics have already failed).
-2. **Manual allowlist.** Render a contact sheet of every body against its weapon
-   set, mark the bad ones by eye, checkbox reads that list. Slow but actually correct.
+## The width check — what it does and does not reach
 
-Suggested: 1 first, fall back to 2 for what it misses.
+Shipped. `npm run silhouettes` measures every body and writes
+`server/resolver-data/narrow_bodies.txt`; the server reads that table and each
+body now carries `fits` alongside `trusted`, both of which the picker's checkbox
+requires. See `server/silhouette.ts` for the measurement and
+`server/measure-silhouettes.ts` for the calibration.
+
+**What is measured.** A weapon is drawn at the character origin, not hung off an
+attach point, so its hilt lands in the same place on every body and only the
+body's own outline decides whether a hand is there. Reach in one direction and
+reach in its opposite are the two lateral extremes of the same outline, so the
+score is the **mean of each opposite pair**, not the worst single direction.
+That is what makes it a width test rather than a position test — and it matters:
+`페코팔라딘_남` measures 9px short facing east and 9px *wide* facing west, and
+renders perfectly. Worst-direction scoring flags it; pair-averaging does not.
+
+**The reference** is the narrowest body sprite named after a folder holding that
+exact art, byte for byte. Which of the copies came first is not recoverable, and
+taking the narrowest only flags bodies smaller than every body the art is known
+to have been drawn for.
+
+**Calibration.** 425 bodies heap between −57 and +2.5, then one at 3, nothing
+until 6.5, eleven above 9. Threshold is **3px**, and every row at or above it was
+rendered and looks wrong. Re-check the tail after any data change with
+`npm run silhouettes -- --min=1 --dry`.
+
+### What it caught — 18 bodies, all newly found
+
+| bodies | px | what is wrong |
+| --- | --- | --- |
+| `룬나이트쁘띠{,2..5}_{남,여}_4`, `그리폰가드_{남,여}_4` | 13–21.5 | rider drawn *without the mount*; the sword floats where the peco's neck would be |
+| `night_watch_*_기관총`, `rebellion_*_기관총`, `night_watch_여_권총` | 6.5–15.5 | limbs-only gun poses — the body sprite is arms and legs, no torso |
+| `가드_여_4` | 3 | genuine silhouette mismatch, the female counterpart of the original bug |
+
+### What it cannot reach
+
+`가드_남_1` — the case that started all this — measures **2px**, which is where
+correct bodies sit. Going to a 2px threshold would take `로드페코_여` and the
+five `룬나이트쁘띠*_여_2` mounts (2.5px) with it, and those were rendered and are
+fine. Higher-ranked false positives below a true positive is not a threshold
+problem; it is the resolution limit of the test.
+
+So `가드_남_1` is **hand-marked** in `narrow_bodies.txt`, below a marker line
+that `npm run silhouettes` preserves across regeneration. That is option 2,
+scoped to what option 1 misses rather than to all 428 bodies.
+
+## The manual pass — `npm run contact-sheet`
+
+The tool for extending that hand-marked list:
+
+```
+npm run contact-sheet -- --min=1                      # everything in the borderline band
+npm run contact-sheet -- 가드_남_1 크루세이더_남         # named bodies, side by side
+npm run contact-sheet -- --min=1 --gender=female --out=cache/review.png
+```
+
+One row per body, three facings, one origin down the column. What to look for is
+whether the crossguard finishes against the shoulder or hangs in the air beside
+it — on `가드_남_1` next to `크루세이더_남` the gap is unmistakable.
+
+Note the labels render Korean as boxes unless sharp finds a CJK font. The
+picture is the point; the rows come out in the order given.
+
+## Still open
+
+- The 2–2.5px band is six bodies wide and only partly reviewed. Render it and
+  hand-mark what is wrong.
+- Only `attack wait` frame 0 is measured. A body that fits at rest and not
+  mid-swing would pass. No evidence yet that any does.
+- Doram bodies are not measured at all — the sweep is `인간족` only.
 
 ## Environment notes
 

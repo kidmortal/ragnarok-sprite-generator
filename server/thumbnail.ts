@@ -131,7 +131,7 @@ export async function renderThumb(
  * pixels: nearest sample, source-over blend. Layer tints are ignored here
  * because `paintOps` in the browser ignores them too.
  */
-function paintOps(
+export function paintOps(
   out: Uint8ClampedArray,
   width: number,
   height: number,

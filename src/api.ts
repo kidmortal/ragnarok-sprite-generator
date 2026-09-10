@@ -9,12 +9,18 @@ export type PartEntry = { name: string; sprId: string; actId: string };
 /**
  * Where a body's weapons came from. Provenance, not proof: nothing in a sprite
  * says which body it was drawn for, so this reports whether the weapons are the
- * job's own or something it inherited -- see `WeaponOrigin` in `server/index.ts`.
+ * job's own or something it inherited -- see `WeaponOrigin` in `server/weapons.ts`.
  */
 export type WeaponOrigin = "own" | "descendant" | "override" | "inherited" | "probe";
 
 /** A body carries how its weapon folder was resolved, so the picker can filter. */
-export type BodyEntry = PartEntry & { origin: WeaponOrigin | null; trusted: boolean };
+export type BodyEntry = PartEntry & {
+  origin: WeaponOrigin | null;
+  /** Whether the weapons are the job's own rather than an ancestor's. */
+  trusted: boolean;
+  /** Whether the body is big enough for the art it is offered. */
+  fits: boolean;
+};
 
 export type PartsCatalog = {
   race: string;
