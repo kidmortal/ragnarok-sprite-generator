@@ -169,6 +169,10 @@ export function label(name: string, kind: string): string {
   const scope = scopeOf(kind);
   const stem = name.normalize("NFC").replace(GENDER, "").replace(/^_+|_+$/g, "");
   if (!stem) return "";
+  // Nothing to translate, and tidying `14_3_mercenary_a` into "14 3 Mercenary a"
+  // would only put a worse spelling above the real one. Most of the monster
+  // folder is already Latin.
+  if (!hasHangul(stem)) return "";
 
   // A headgear names its item outright, and the item table has better English
   // for it than taking the name apart word by word would. Only a headgear,

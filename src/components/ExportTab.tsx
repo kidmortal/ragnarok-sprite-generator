@@ -970,9 +970,12 @@ function SelectGrid({
   const [open, setOpen] = useState(!collapsible);
   const { ref: sentinelRef, inView: sentinelInView } = useInView<HTMLDivElement>("200px", false);
 
+  // Both spellings, as in `PartPicker`: the name as it is on disk and whatever
+  // `translate.ts` made of it, so a body is reachable by typing English.
   const matches = useMemo(() => {
     const needle = filter.trim().toLowerCase();
-    return needle ? entries.filter((e) => e.name.toLowerCase().includes(needle)) : entries;
+    if (!needle) return entries;
+    return entries.filter((e) => `${e.name} ${e.label}`.toLowerCase().includes(needle));
   }, [entries, filter]);
 
   useEffect(() => setShown(PAGE), [filter, entries]);
@@ -1081,12 +1084,13 @@ function ExportTile({
       className={`tile${selected ? " on" : ""}`}
       onClick={onToggle}
       disabled={disabled}
-      title={entry.name}
+      title={entry.label ? `${entry.label}\n${entry.name}` : entry.name}
     >
       <div className="tile-preview">
         {thumb ? <img src={thumb.url} alt="" /> : failed ? <span className="error">!</span> : null}
       </div>
-      <span className="tile-name">{entry.name}</span>
+      <span className="tile-name">{entry.label || entry.name}</span>
+      {entry.label ? <span className="tile-subname">{entry.name}</span> : null}
     </button>
   );
 }
