@@ -9,11 +9,14 @@
  * - For the stand and sit actions a head/headgear act holds one frame per head
  *   direction (straight/left/right) rather than an animation.
  * - Layers are drawn by z-index: garment -1, body 0, head 1, weapon 2, shield 3,
- *   headgears 4+n.
+ *   headgears 4+n. The weapon's is per-frame rather than fixed, taken from the
+ *   body's .imf, which drops it behind the body during a swing away from the
+ *   camera.
  */
 
 import type { Act } from "./act";
 import type { Spr } from "./spr";
+import { weaponInFront, type Imf } from "./imf";
 
 export const PLAYER_ACTIONS = [
   { name: "Stand", base: 0 },
@@ -78,9 +81,13 @@ export const HEAD_DIRECTIONS = ["Straight", "Left", "Right"] as const;
 export type PartKind = "body" | "head" | "headgear" | "weapon" | "shield" | "garment";
 
 /**
- * Draw order. zrenderer derives shield and garment ordering from .imf/lua data
- * that is not present here, so those use fixed defaults: a garment sits behind
- * the body, weapon and shield in front of it.
+ * Base draw order. A garment sits behind the body, weapon and shield in front.
+ *
+ * The weapon's is only a starting point: a body's .imf overrides it per frame,
+ * swinging the weapon behind the body on the frames the client draws it there
+ * (see `weaponZIndex`). The shield and garment keep these fixed values --
+ * an .imf's second layer is the exact complement of its first in every file in
+ * this data set, so it carries no information about them to derive.
  */
 export const Z_INDEX: Record<PartKind, number> = {
   garment: -1,
@@ -100,7 +107,39 @@ export type Part = {
   act: Act;
   /** Draw order; lower is further back. */
   zIndex: number;
+  /**
+   * Per-frame draw order, on the body part only. Parsed from the job's .imf.
+   */
+  imf?: Imf | null;
 };
+
+/**
+ * Where the weapon sits for one frame.
+ *
+ * The client draws a weapon in front of the body most of the time, but swings
+ * it behind on the later frames of an attack when the character faces away.
+ * That is what the body's .imf records, so it decides, and without one the
+ * weapon keeps its fixed place in front.
+ */
+function weaponZIndex(body: Part | undefined, options: ComposeOptions, frame: number): number {
+  if (!body?.imf) return Z_INDEX.weapon;
+  const action = actionIndex(body, options);
+  const motions = body.act.actions[action]?.motions.length ?? 0;
+  const motion = motions ? frame % motions : frame;
+  return weaponInFront(body.imf, action, motion) ? Z_INDEX.weapon : Z_INDEX.body - 0.5;
+}
+
+/**
+ * Whether any of these parts carries true-colour (`sprType 1`) frames.
+ *
+ * Only SPR 2.0 and up has them, and only a handful of sprites use them — an
+ * effect layer such as smoke or a glow, drawn as rgba rather than as palette
+ * indices. What they cost is the palette pass on export; see
+ * `SheetOptions.trueColour` in `apng.ts`.
+ */
+export function hasTrueColour(parts: readonly Part[]): boolean {
+  return parts.some((part) => part.spr.rgbaCount > 0);
+}
 
 export type ComposeOptions = {
   /** Base action offset, e.g. 0 for stand -- see PLAYER_ACTIONS. */
@@ -252,7 +291,14 @@ export function drawOpsForPart(
   const ops: DrawOp[] = [];
 
   for (const layer of motion.layers) {
-    const canvas = canvases[layer.sprIndex];
+    // `sprType` picks the frame list: 0 is the palette-indexed frames, 1 the
+    // rgba ones, each numbered from zero. `spr.frames` holds them end to end,
+    // indexed first, so an rgba layer has to be shifted past them -- otherwise
+    // an effect layer silently draws a *body* frame with the same number, and
+    // a monster like Lilith renders as several scaled, rotated copies of itself.
+    if (layer.sprIndex < 0) continue;
+    const index = layer.sprType === 1 ? part.spr.indexedCount + layer.sprIndex : layer.sprIndex;
+    const canvas = canvases[index];
     if (!canvas || layer.color[3] === 0) continue;
     ops.push({
       canvas,
@@ -278,7 +324,10 @@ function drawOpsForFrame(
   const body = parts.find((p) => p.kind === "body");
   const ops: DrawOp[] = [];
 
-  for (const part of [...parts].sort((a, b) => a.zIndex - b.zIndex)) {
+  const zIndexOf = (part: Part) =>
+    part.kind === "weapon" ? weaponZIndex(body, options, frame) : part.zIndex;
+
+  for (const part of [...parts].sort((a, b) => zIndexOf(a) - zIndexOf(b))) {
     ops.push(
       ...drawOpsForPart(part, cache, options, frame, anchorOffset(part, body, options, frame))
     );

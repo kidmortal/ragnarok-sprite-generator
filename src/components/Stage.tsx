@@ -3,6 +3,7 @@ import {
   DIRECTIONS,
   HEAD_DIRECTIONS,
   buildFrameCache,
+  hasTrueColour,
   renderAction,
   type ComposeOptions,
   type Part,
@@ -107,7 +108,9 @@ export function Stage({
     setStatus("Packing spritesheet…");
     try {
       const { frames, delay } = renderAction(parts, cache, options, zoom);
-      const sheet = await encodeSpritesheet(frames);
+      const sheet = await encodeSpritesheet(frames, frames.length, {
+        trueColour: hasTrueColour(parts),
+      });
       download(sheet.blob, `${fileName}_sheet.${SHEET_EXTENSION}`);
 
       const meta = {

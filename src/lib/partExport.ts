@@ -10,7 +10,7 @@
 
 import { fetchFile, type PartEntry } from "../api";
 import { SHEET_EXTENSION, encodeSpritesheet } from "./apng";
-import { Z_INDEX, buildFrameCache, type Part, type PartKind } from "./compose";
+import { Z_INDEX, buildFrameCache, hasTrueColour, type Part, type PartKind } from "./compose";
 import { renderPartSheet, type SheetAction, type SheetActionSpec } from "./partSheet";
 import { parseAct } from "./act";
 import { parseSpr } from "./spr";
@@ -107,7 +107,9 @@ export async function exportPart(
     !standalone
   );
 
-  const packed = await encodeSpritesheet(sheet.frames, sheet.columns);
+  const packed = await encodeSpritesheet(sheet.frames, sheet.columns, {
+    trueColour: hasTrueColour([part]),
+  });
   const key = await partKey(options.kind, entry.sprId);
   const image = `${options.kind}/${key}.${SHEET_EXTENSION}`;
 

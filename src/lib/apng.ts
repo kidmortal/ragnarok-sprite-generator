@@ -185,6 +185,26 @@ async function encodeLossless(
   return blob;
 }
 
+export type SheetOptions = {
+  /**
+   * Whether these frames carry true-colour art — an SPR 2.0+ `sprType 1` layer,
+   * which is where a soft effect like Lilith's scythe smoke lives.
+   *
+   * It turns `quantiseSheet` off, because that pass reads a whole sheet as
+   * indexed pixel art and such a layer is the one thing that is not. Its alpha
+   * rule assumes translucency comes from the .act drawing a layer at one
+   * opacity, so thousands of pixels share an exact alpha level; a per-pixel
+   * gradient instead spreads a few dozen pixels across a hundred levels, every
+   * one of them falls under the authored threshold, and the plume is snapped to
+   * a hard, fully opaque blob. The colour cap then flattens whatever ramp is
+   * left. See `quantise.ts`.
+   *
+   * The cost is size: such a sheet exceeds 256 colours by design, so WebP's
+   * palette transform was never available to it either way.
+   */
+  trueColour?: boolean;
+};
+
 /**
  * Pack frames into a grid spritesheet, as lossless WebP.
  *
@@ -197,11 +217,13 @@ async function encodeLossless(
  * back on the sprite's own palette. Worth about 2% of the set on its own — the
  * encoder is where the size really lives — but it is what keeps a sheet inside
  * the 256 colours WebP's palette transform needs, and it sharpens edges that
- * anti-aliasing softened. See its file.
+ * anti-aliasing softened. See its file — and `SheetOptions.trueColour` for the
+ * sprites it has to sit out.
  */
 export async function encodeSpritesheet(
   canvases: HTMLCanvasElement[],
-  columns = canvases.length
+  columns = canvases.length,
+  options: SheetOptions = {}
 ): Promise<Sheet> {
   if (canvases.length === 0) throw new Error("no frames to pack");
 
@@ -224,7 +246,7 @@ export async function encodeSpritesheet(
   // The pixels leave for the encoder from here rather than from the canvas, so
   // there is nothing to write back: the canvas has no reader after this point.
   const image = ctx.getImageData(0, 0, sheet.width, sheet.height);
-  quantiseSheet(image.data);
+  if (!options.trueColour) quantiseSheet(image.data);
 
   const blob = await encodeLossless(image.data, sheet.width, sheet.height);
 

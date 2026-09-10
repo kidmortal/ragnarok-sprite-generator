@@ -1,0 +1,155 @@
+# Player jobs, extracted from a client's luafiles514 by
+# `server/extract-lua-tables.ts`. Columns: job id, JT_ constant, English
+# name, and the sprite name job_names.txt gives that id.
+#
+# The client's lua carries no job-to-weapon-folder table; see README.md.
+0	JT_NOVICE	Novice	초보자
+1	JT_SWORDMAN	Swordman	검사
+2	JT_MAGICIAN	Magician	마법사
+3	JT_ARCHER	Archer	궁수
+4	JT_ACOLYTE	Acolyte	성직자
+5	JT_MERCHANT	Merchant	상인
+6	JT_THIEF	Thief	도둑
+7	JT_KNIGHT	Knight	기사
+8	JT_PRIEST	Priest	프리스트
+9	JT_WIZARD	Wizard	위저드
+10	JT_BLACKSMITH	Blacksmith	제철공
+11	JT_HUNTER	Hunter	헌터
+12	JT_ASSASSIN	Assassin	어세신
+14	JT_CRUSADER	Crusader	크루세이더
+15	JT_MONK	Monk	몽크
+16	JT_SAGE	Sage	세이지
+17	JT_ROGUE	Rogue	로그
+18	JT_ALCHEMIST	Alchemist	연금술사
+19	JT_BARD	Bard	바드
+20	JT_DANCER	Dancer	무희
+23	JT_SUPERNOVICE	Super Novice	슈퍼노비스
+24	JT_GUNSLINGER	Gunslinger	건너
+25	JT_NINJA	Ninja	닌자
+4001	JT_NOVICE_H	Novice High	초보자
+4002	JT_SWORDMAN_H	Swordman High	검사
+4003	JT_MAGICIAN_H	Magician High	마법사
+4004	JT_ARCHER_H	Archer High	궁수
+4005	JT_ACOLYTE_H	Acolyte High	성직자
+4006	JT_MERCHANT_H	Merchant High	상인
+4007	JT_THIEF_H	Thief High	도둑
+4008	JT_KNIGHT_H	Lord Knight	로드나이트
+4009	JT_PRIEST_H	High Priest	하이프리
+4010	JT_WIZARD_H	High Wizard	하이위저드
+4011	JT_BLACKSMITH_H	White Smith	화이트스미스
+4012	JT_HUNTER_H	Sniper	스나이퍼
+4013	JT_ASSASSIN_H	Assassin Cross	어쌔신크로스
+4015	JT_CRUSADER_H	Paladin	팔라딘
+4016	JT_MONK_H	Champion	챔피온
+4017	JT_SAGE_H	Professor	프로페서
+4018	JT_ROGUE_H	Stalker	스토커
+4019	JT_ALCHEMIST_H	Creator	크리에이터
+4020	JT_BARD_H	Clown	클라운
+4021	JT_DANCER_H	Gypsy	집시
+4023	JT_NOVICE_B	Baby	초보자
+4024	JT_SWORDMAN_B	Baby Swordman	검사
+4025	JT_MAGICIAN_B	Baby Magician	마법사
+4026	JT_ARCHER_B	Baby Archer	궁수
+4027	JT_ACOLYTE_B	Baby Acolyte	성직자
+4028	JT_MERCHANT_B	Baby Merchant	상인
+4029	JT_THIEF_B	Baby Thief	도둑
+4030	JT_KNIGHT_B	Baby Knight	기사
+4031	JT_PRIEST_B	Baby Priest	프리스트
+4032	JT_WIZARD_B	Baby Wizard	위저드
+4033	JT_BLACKSMITH_B	Baby Blacksmith	제철공
+4034	JT_HUNTER_B	Baby Hunter	헌터
+4035	JT_ASSASSIN_B	Baby Assassin	어세신
+4037	JT_CRUSADER_B	Baby Crusader	크루세이더
+4038	JT_MONK_B	Baby Monk	몽크
+4039	JT_SAGE_B	Baby Sage	세이지
+4040	JT_ROGUE_B	Baby Rogue	로그
+4041	JT_ALCHEMIST_B	Baby Alchemist	연금술사
+4042	JT_BARD_B	Baby Bard	바드
+4043	JT_DANCER_B	Baby Dancer	무희바지
+4045	JT_SUPERNOVICE_B	Super Baby	슈퍼노비스
+4046	JT_TAEKWON	태권	태권소년
+4047	JT_STAR	권성	권성
+4048	JT_STAR2	권성	권성융합
+4049	JT_LINKER	소울링커	소울링커
+4054	JT_RUNE_KNIGHT	Rune Knight	룬나이트
+4055	JT_WARLOCK	Warlock	워록
+4056	JT_RANGER	Ranger	레인져
+4057	JT_ARCHBISHOP	Arch Bishop	아크비숍
+4058	JT_MECHANIC	Mechanic	미케닉
+4059	JT_GUILLOTINE_CROSS	Glt. Cross	길로틴크로스
+4060	JT_RUNE_KNIGHT_H	Rune Knight	룬나이트
+4061	JT_WARLOCK_H	Warlock	워록
+4062	JT_RANGER_H	Ranger	레인져
+4063	JT_ARCHBISHOP_H	Arch Bishop	아크비숍
+4064	JT_MECHANIC_H	Mechanic	미케닉
+4065	JT_GUILLOTINE_CROSS_H	Glt. Cross	길로틴크로스
+4066	JT_ROYAL_GUARD	Royal Guard	가드
+4067	JT_SORCERER	Sorcerer	소서러
+4068	JT_MINSTREL	Minstrel	민스트럴
+4069	JT_WANDERER	Wanderer	원더러
+4070	JT_SURA	Sura	슈라
+4071	JT_GENETIC	Genetic	제네릭
+4072	JT_SHADOW_CHASER	Shadow Chaser	쉐도우체이서
+4073	JT_ROYAL_GUARD_H	Royal Guard	가드
+4074	JT_SORCERER_H	Sorcerer	소서러
+4075	JT_MINSTREL_H	Minstrel	민스트럴
+4076	JT_WANDERER_H	Wanderer	원더러
+4077	JT_SURA_H	Sura	슈라
+4078	JT_GENETIC_H	Genetic	제네릭
+4079	JT_SHADOW_CHASER_H	Shadow Chaser	쉐도우체이서
+4096	JT_RUNE_KNIGHT_B	Baby Rune	룬나이트
+4097	JT_WARLOCK_B	Baby Warlock	워록
+4098	JT_RANGER_B	Baby Ranger	레인져
+4099	JT_ARCHBISHOP_B	Baby Bishop	아크비숍
+4100	JT_MECHANIC_B	Baby Mechanic	미케닉
+4101	JT_GUILLOTINE_CROSS_B	Baby Cross	길로틴크로스
+4102	JT_ROYAL_GUARD_B	Baby Guard	가드
+4103	JT_SORCERER_B	Baby Sorcerer	소서러
+4104	JT_MINSTREL_B	Baby Minstrel	민스트럴
+4105	JT_WANDERER_B	Baby Wanderer	원더러
+4106	JT_SURA_B	Baby Sura	슈라
+4107	JT_GENETIC_B	Baby Genetic	제네릭
+4108	JT_SHADOW_CHASER_B	Baby Chaser	쉐도우체이서
+4190	JT_SUPERNOVICE2	Super Novice	슈퍼노비스
+4191	JT_SUPERNOVICE2_B	Baby Super Novice	슈퍼노비스
+4211	JT_KAGEROU	Kagerou	kagerou
+4212	JT_OBORO	Oboro	oboro
+4215	JT_REBELLION	Rebellion	rebellion
+4218	JT_DO_SUMMONER	Summoner	summoner
+4220	JT_DO_SUMMONER_B	Baby Summoner	summoner
+4222	JT_NINJA_B	Baby Ninja	닌자
+4223	JT_KAGEROU_B	Baby Kagerou	kagerou
+4224	JT_OBORO_B	Baby Oboro	oboro
+4225	JT_TAEKWON_B	Baby TaeKwon	태권소년
+4226	JT_STAR_B	Baby Star Gladiator	권성
+4227	JT_LINKER_B	Baby Soul Linker	소울링커
+4228	JT_GUNSLINGER_B	Baby Gunslinger	건너
+4229	JT_REBELLION_B	Baby Rebellion	rebellion
+4238	JT_STAR2_B	Baby Star Gladiator	권성융합
+4239	JT_STAR_EMPEROR	성제	성제
+4240	JT_SOUL_REAPER	소울리퍼	소울리퍼
+4241	JT_STAR_EMPEROR_B	Baby Star Emperor	성제
+4242	JT_SOUL_REAPER_B	Baby Soul Reaper	소울리퍼
+4243	JT_STAR2_EMPEROR	성제	성제융합
+4244	JT_STAR2_EMPEROR_B	Baby Star Emperor	성제융합
+4252	JT_DRAGON_KNIGHT	Dragon Knight	DRAGON_KNIGHT
+4253	JT_MEISTER	Meister	MEISTER
+4254	JT_SHADOW_CROSS	Shadow Cross	SHADOW_CROSS
+4255	JT_ARCH_MAGE	Arch Mage	ARCH_MAGE
+4256	JT_CARDINAL	Cardinal	CARDINAL
+4257	JT_WINDHAWK	Windhawk	WINDHAWK
+4258	JT_IMPERIAL_GUARD	Imperial Guard	IMPERIAL_GUARD
+4259	JT_BIOLO	Biolo	BIOLO
+4260	JT_ABYSS_CHASER	Abyss Chaser	ABYSS_CHASER
+4261	JT_ELEMENTAL_MASTER	Elemental Master	ELEMETAL_MASTER
+4262	JT_INQUISITOR	Inquisitor	INQUISITOR
+4263	JT_TROUBADOUR	Troubadour	TROUBADOUR
+4264	JT_TROUVERE	Trouvere	TROUVERE
+4302	JT_SKY_EMPEROR	천제	SKY_EMPEROR
+4303	JT_SOUL_ASCETIC	영도사	SOUL_ASCETIC
+4304	JT_SHINKIRO	Shinkiro	SHINKIRO
+4305	JT_SHIRANUI	Shiranui	SHIRANUI
+4306	JT_NIGHT_WATCH	Night Watch	NIGHT_WATCH
+4307	JT_HYPER_NOVICE	Hyper Novice	HYPER_NOVICE
+4308	JT_SPIRIT_HANDLER	Spirit Handler	SPIRIT_HANDLER
+4316	JT_SKY_EMPEROR2	천제	SKY_EMPEROR2

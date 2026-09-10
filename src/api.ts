@@ -6,10 +6,20 @@ export async function fetchFile(id: string): Promise<ArrayBuffer> {
 
 export type PartEntry = { name: string; sprId: string; actId: string };
 
+/**
+ * Where a body's weapons came from. Provenance, not proof: nothing in a sprite
+ * says which body it was drawn for, so this reports whether the weapons are the
+ * job's own or something it inherited -- see `WeaponOrigin` in `server/index.ts`.
+ */
+export type WeaponOrigin = "own" | "descendant" | "override" | "inherited" | "probe";
+
+/** A body carries how its weapon folder was resolved, so the picker can filter. */
+export type BodyEntry = PartEntry & { origin: WeaponOrigin | null; trusted: boolean };
+
 export type PartsCatalog = {
   race: string;
   gender: string;
-  bodies: PartEntry[];
+  bodies: BodyEntry[];
   heads: PartEntry[];
   headgears: PartEntry[];
 };
@@ -22,6 +32,9 @@ export async function fetchParts(race: string, gender: string): Promise<PartsCat
 
 export type Equipment = {
   job: string;
+  origin: WeaponOrigin | null;
+  /** The body's .imf, holding its per-frame draw order; null when it has none. */
+  imfId: string | null;
   weapons: PartEntry[];
   shields: PartEntry[];
   garments: PartEntry[];

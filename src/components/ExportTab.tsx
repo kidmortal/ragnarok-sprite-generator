@@ -89,13 +89,21 @@ const BASE_BY_SLUG = new Map(PLAYER_SHEET_ACTIONS.map((spec) => [spec.slug, spec
 const DEFAULT_MONSTER_ACTIONS = ["stand", "attack", "hurt", "dead"];
 
 /**
- * Monsters face **south-west** unless told otherwise, while players are
- * exported facing south.
+ * Players face **south-east**, the three-quarter view the party fights in.
+ *
+ * The party stands on the left of the battlefield facing right, so south-east
+ * is the angle a character is actually seen from in play, and it reads as a
+ * pose rather than the flat head-on stance south gives.
+ */
+const PLAYER_DIRECTION = 7;
+
+/**
+ * Monsters face **south-west** unless told otherwise, the mirror of the
+ * player's south-east.
  *
  * They are not the same choice and must not share one control: the party
- * stands on the left of the battlefield facing right, so a monster on the right
- * reads as facing them only at three-quarters. South is what a player wants -
- * a character screen looks at you - and south-west is what an opponent wants.
+ * stands on the left of the battlefield facing right, so an opponent on the
+ * right has to face back the other way to read as facing them.
  */
 const MONSTER_DIRECTION = 1;
 
@@ -201,7 +209,7 @@ export function ExportTab() {
   const [actions, setActions] = useState<string[]>(DEFAULT_ACTIONS);
   const [attackVariant, setAttackVariant] = useState<string>("attack");
   const [sources, setSources] = useState<PoseSources>({});
-  const [direction, setDirection] = useState(0);
+  const [direction, setDirection] = useState(PLAYER_DIRECTION);
   const [headDirection, setHeadDirection] = useState(0);
 
   const [base, setBase] = useState<Manifest | null>(null);

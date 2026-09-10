@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { PartEntry } from "../api";
 import { loadPartThumb, type Thumb } from "../lib/thumbs";
 import { useInView } from "../lib/useInView";
@@ -9,6 +9,8 @@ type Props = {
   value: PartEntry | null;
   onChange: (entry: PartEntry | null) => void;
   optional?: boolean;
+  /** Extra control rendered under the filter box, e.g. a scope toggle. */
+  aside?: ReactNode;
 };
 
 /** How many tiles to mount at once; the rest arrive as the grid is scrolled. */
@@ -19,7 +21,7 @@ const PAGE = 60;
  * headgear folders run past a thousand entries, so nothing is fetched until its
  * tile is scrolled into view.
  */
-export function PartPicker({ label, entries, value, onChange, optional }: Props) {
+export function PartPicker({ label, entries, value, onChange, optional, aside }: Props) {
   const [filter, setFilter] = useState("");
   const [shown, setShown] = useState(PAGE);
   const { ref: sentinelRef, inView: sentinelInView } = useInView<HTMLDivElement>("200px", false);
@@ -46,6 +48,7 @@ export function PartPicker({ label, entries, value, onChange, optional }: Props)
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
       />
+      {aside}
       {entries.length === 0 ? (
         <p className="picker-empty">None for this job</p>
       ) : (

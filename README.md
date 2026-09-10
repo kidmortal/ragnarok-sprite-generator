@@ -70,6 +70,10 @@ This app ships **no game assets**. You need a Ragnarok Online client's
    unpacks a GRF and converts the filenames to UTF-8.
 3. Point this app at the extracted `data/sprite` directory: copy or symlink it to
    `data/` in the project root (gitignored).
+4. Optional: copy the extracted `data/imf` folder in alongside it. Those files
+   carry each job's per-frame draw order, which is what swings a weapon behind
+   the body mid-attack when the character faces away. Without them the weapon
+   simply always draws in front.
 
 The result should look like this — the folder names are Korean, and that is
 expected:
@@ -85,6 +89,7 @@ data/
   방패/{job}/        # shields
   로브/{garment}/    # garments
   몬스터/            # monsters
+  imf/              # per-job draw order (optional)
 ```
 
 Sprites are addressed by their raw path bytes, so Korean names work, including
@@ -111,8 +116,9 @@ This project stands on **[zrenderer](https://github.com/zhad3/zrenderer)** by
 excellent [`RESOLVER.md`](https://github.com/zhad3/zrenderer/blob/main/RESOLVER.md)
 are where the composition rules below come from: how a head attaches to a body,
 how action indices map to facings, and which folder each job's equipment lives
-in. The job tables in `server/resolver-data/` are copied straight from that
-project (MIT licensed).
+in. The job tables in `server/resolver-data/` started as copies from that
+project (MIT licensed); `server/resolver-data/README.md` records where they have
+since been corrected, and which of them can be regenerated from a client.
 
 **[zextractor](https://github.com/zhad3/zextractor/)**, also by zhad3, is what
 you use to get the sprite data out of `data.grf` in the first place.

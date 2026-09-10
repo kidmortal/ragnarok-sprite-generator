@@ -1,0 +1,24 @@
+# Weapon folder overrides, applied on top of job_weapon_names.txt.
+#
+# Format: <job name as it appears in job_names.txt> <TAB> <weapon folder>
+#
+# Only for jobs the table sends somewhere provably wrong and that the
+# substring rule in server/index.ts cannot reach -- it upgrades a job to a
+# folder whose name is spelled out *inside* the job name (타조레인져 -> 레인져),
+# which cannot work when the folder name is the longer of the two.
+#
+# 가드 is the Royal Guard: pcjobname.lub/jobidentity.lub give
+# JT_ROYAL_GUARD = 4066, and job_names.txt line 4066-3950 is 가드 (see
+# pc_jobs.txt). Royal Guard is the third job above Crusader, so the table's
+# 크루세이더 is the usual stale-ancestor answer. 로얄가드 is on disk with 189
+# acts, and 사자로얄가드 -- the lion-mounted form of the same job, JT_LION_
+# ROYAL_GUARD = 4201 -- already resolves to it, so sending 가드 to 크루세이더
+# was internally inconsistent.
+가드	로얄가드
+#
+# 그리폰가드 is the gryphon-mounted Royal Guard: ReqPCJobName carries it as
+# "Royal Guard 2ND". 신페코로얄가드 (172 acts) is the only weapon folder in the
+# data set that no body resolves to, and it is the mounted counterpart of
+# 로얄가드 exactly as 신페코크루세이더 -- the table's answer here -- is of
+# 크루세이더.
+그리폰가드	신페코로얄가드

@@ -28,6 +28,22 @@ const readTable = (name: string): string[] => {
 
 const jobNames = readTable("job_names.txt");
 const jobWeaponNames = readTable("job_weapon_names.txt");
+const imfNames = readTable("imf_names.txt");
+
+/**
+ * Hand-checked corrections applied on top of the weapon table, keyed by job
+ * name. See `resolver-data/job_weapon_overrides.txt` for the evidence behind
+ * each one.
+ */
+const weaponOverrides = new Map<string, string>(
+  readTable("job_weapon_overrides.txt")
+    .filter((line) => line.trim() && !line.startsWith("#"))
+    .map((line) => {
+      const [job, folder] = line.split("\t");
+      return [job.trim().toLowerCase(), folder.trim()] as const;
+    })
+    .filter(([job, folder]) => job && folder)
+);
 
 /** Shield name suffixes; index 0 is intentionally empty in the source table. */
 export const shieldNames = readTable("shield_names.txt");
@@ -41,6 +57,10 @@ export type JobFolders = {
   weaponPrefix: string;
   /** Whether weapon file names carry the gender: `검사_남_검` but `활용병_활`. */
   weaponHasGender: boolean;
+  /** Base name of the job's .imf, which holds its per-frame draw order. */
+  imfName: string;
+  /** True when `weaponFolder` came from job_weapon_overrides.txt. */
+  weaponOverridden: boolean;
   /** False when no table entry matched, so callers can probe the filesystem. */
   matched: boolean;
 };
@@ -48,21 +68,47 @@ export type JobFolders = {
 /** Job name (as it appears in a body sprite filename) → folders. */
 const byJobName = new Map<string, JobFolders>();
 
+/**
+ * Whether a weapon folder is plausibly this job's own, by name.
+ *
+ * Used only to break ties between repeated job names -- it says nothing about
+ * jobs that legitimately borrow an ancestor's folder (룬나이트 under 기사).
+ */
+const relatedName = (job: string, folder: string) => {
+  const [a, b] = [job.toLowerCase(), folder.toLowerCase()];
+  return a.includes(b) || b.includes(a);
+};
+
 for (let id = 0; id < jobNames.length; id++) {
   const job = jobNames[id];
   if (!job) continue;
   const key = job.toLowerCase();
-  if (byJobName.has(key)) continue; // 102 names repeat across ids; first wins
 
   // Stored as `folder\prefix`, a Windows path fragment.
-  const [weaponFolder, weaponPrefix] = (jobWeaponNames[id] ?? "").split("\\");
-  byJobName.set(key, {
+  const [tableFolder, tablePrefix] = (jobWeaponNames[id] ?? "").split("\\");
+  const override = weaponOverrides.get(key);
+  const weaponFolder = override || tableFolder || job;
+  const entry: JobFolders = {
     job,
-    weaponFolder: weaponFolder || job,
-    weaponPrefix: weaponPrefix || weaponFolder || job,
+    imfName: imfNames[id] || job,
+    weaponOverridden: Boolean(override),
+    weaponFolder,
+    // An override names a folder whose files are prefixed with that folder's
+    // own name, so the table's prefix does not carry over.
+    weaponPrefix: override || tablePrefix || tableFolder || job,
     weaponHasGender: true,
     matched: true,
-  });
+  };
+
+  // 102 names repeat across ids, and the rows can disagree: peco_rebellion is
+  // filed once against 초보자 and once against rebellion. Taking the first row
+  // blindly hands a Rebellion on a motorcycle a Novice dagger, so a row naming
+  // a folder that looks like the job itself wins over one that does not.
+  const seen = byJobName.get(key);
+  if (seen && (relatedName(seen.job, seen.weaponFolder) || !relatedName(job, entry.weaponFolder))) {
+    continue;
+  }
+  byJobName.set(key, entry);
 }
 
 /**
@@ -74,6 +120,8 @@ const MERCENARIES: Record<string, JobFolders> = Object.fromEntries(
     name,
     {
       job: name,
+      imfName: name,
+      weaponOverridden: false,
       weaponFolder: "용병",
       weaponPrefix: name,
       weaponHasGender: false, // 인간족/용병/활용병_활, with no gender segment
@@ -109,7 +157,15 @@ export function foldersForJob(bodyName: string): JobFolders {
     if (hit) return hit;
   }
 
-  return { job: name, weaponFolder: name, weaponPrefix: name, weaponHasGender: true, matched: false };
+  return {
+    job: name,
+    imfName: name,
+    weaponOverridden: false,
+    weaponFolder: name,
+    weaponPrefix: name,
+    weaponHasGender: true,
+    matched: false,
+  };
 }
 
 export const jobCount = byJobName.size;

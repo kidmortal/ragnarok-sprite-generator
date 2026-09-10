@@ -9,6 +9,7 @@ import {
 } from "../api";
 import { parseSpr } from "../lib/spr";
 import { parseAct } from "../lib/act";
+import { parseImf } from "../lib/imf";
 import {
   PLAYER_ACTIONS,
   Z_INDEX,
@@ -28,6 +29,10 @@ async function loadPart(entry: PartEntry, kind: PartKind, zIndex: number): Promi
 }
 
 export function Generator() {
+  // Hides bodies whose weapons are only inherited from another job -- see
+  // `WeaponOrigin` in server/index.ts. It filters by how the mapping was
+  // derived, which is knowable; it cannot check that a pairing looks right.
+  const [ownWeaponsOnly, setOwnWeaponsOnly] = useState(false);
   const [race, setRace] = useState("human");
   const [gender, setGender] = useState("male");
   const [catalog, setCatalog] = useState<PartsCatalog | null>(null);
@@ -45,6 +50,16 @@ export function Generator() {
     direction: 0,
     headDirection: 0,
   });
+
+  const bodies = useMemo(
+    () => (ownWeaponsOnly ? (catalog?.bodies ?? []).filter((b) => b.trusted) : catalog?.bodies ?? []),
+    [catalog, ownWeaponsOnly]
+  );
+
+  // Keep the selection valid when the filter hides whatever was picked.
+  useEffect(() => {
+    if (body && !bodies.some((b) => b.sprId === body.sprId)) setBody(bodies[0] ?? null);
+  }, [bodies, body]);
 
   const [parts, setParts] = useState<Part[]>([]);
   const [loading, setLoading] = useState(false);
@@ -105,9 +120,16 @@ export function Generator() {
 
     setLoading(true);
     setError(null);
-    Promise.all(selected.map((s) => loadPart(s.entry, s.kind, s.zIndex)))
-      .then((loaded) => {
+    // The body's .imf rides along on the body part; it decides per frame
+    // whether the weapon draws in front of the body or behind it.
+    const imfId = equipment?.imfId ?? null;
+    Promise.all([
+      Promise.all(selected.map((s) => loadPart(s.entry, s.kind, s.zIndex))),
+      imfId ? fetchFile(imfId).then(parseImf).catch(() => null) : Promise.resolve(null),
+    ])
+      .then(([loaded, imf]) => {
         if (cancelled) return;
+        for (const part of loaded) if (part.kind === "body") part.imf = imf;
         setParts(loaded);
         setLoading(false);
       })
@@ -120,7 +142,7 @@ export function Generator() {
     return () => {
       cancelled = true;
     };
-  }, [body, head, headgears, weapon, shield, garment]);
+  }, [body, head, headgears, weapon, shield, garment, equipment?.imfId]);
 
   const exportName = [body?.name, head?.name, weapon?.name, shield?.name, garment?.name]
     .filter(Boolean)
@@ -165,7 +187,22 @@ export function Generator() {
 
         {catalog && (
           <>
-            <PartPicker label="Body" entries={catalog.bodies} value={body} onChange={setBody} />
+            <PartPicker
+              label="Body"
+              entries={bodies}
+              value={body}
+              onChange={setBody}
+              aside={
+                <label className="picker-toggle" title="Hide bodies whose weapons are only inherited from an ancestor class, or guessed from the folder layout">
+                  <input
+                    type="checkbox"
+                    checked={ownWeaponsOnly}
+                    onChange={(e) => setOwnWeaponsOnly(e.target.checked)}
+                  />
+                  Own weapon sprites only
+                </label>
+              }
+            />
             <PartPicker label="Head" entries={catalog.heads} value={head} onChange={setHead} />
             {equipment && (
               <>
