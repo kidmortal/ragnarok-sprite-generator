@@ -38,7 +38,30 @@
       "poses": {}
     }
   },
-  "names": {},
+  "names": {
+    "meister_madogear2_남": {
+      "attack": "attack2",
+      "poses": {
+        "skill": "attack3",
+        "channel": "skill"
+      }
+    },
+    "meister_madogear2_여": {
+      "attack": "attack2",
+      "poses": {
+        "skill": "attack3",
+        "channel": "skill"
+      }
+    },
+    "arch_mage_남": {
+      "attack": "attack2",
+      "poses": {}
+    },
+    "arch_mage_여": {
+      "attack": "attack3",
+      "poses": {}
+    }
+  },
   "keys": {
     "body_8ea60b0c": {
       "attack": "attack2",
