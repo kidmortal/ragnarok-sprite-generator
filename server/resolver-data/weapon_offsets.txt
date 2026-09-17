@@ -25,9 +25,13 @@
 #
 # Every matching row applies, in file order, and a later row overrides an
 # earlier one. Put the broad nudge for a body first and the frames that need
-# something else under it. A malformed row is an error at startup rather than a
-# skipped line: a correction that silently does nothing would only be noticed by
-# spotting the misfit all over again.
+# something else under it.
+#
+# A malformed row is refused whole rather than skipped -- the file is parsed as
+# one thing, so a row nobody can read means the edit does not take and the
+# server keeps the table it already had, naming the line in its log. What it
+# looks like from the preview is a nudge that changed nothing; the line number
+# is in the terminal running the server.
 #
 # To find the numbers, render the pairing and look:
 #

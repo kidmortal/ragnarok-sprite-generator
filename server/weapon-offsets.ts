@@ -40,10 +40,16 @@ function current(): WeaponOffsetRule[] {
   try {
     rules = parseWeaponOffsets(fs.readFileSync(FILE, "utf8"));
   } catch (error) {
-    // A malformed table is worth shouting about but not worth taking the
-    // server down for: the rest of the app has nothing to do with it.
-    console.error(`weapon offsets: ${(error as Error).message}`);
-    rules = [];
+    // **A broken edit keeps the last good table rather than emptying it.** A
+    // malformed row is worth shouting about and not worth taking the server
+    // down for - the rest of the app has nothing to do with it - but it used to
+    // leave `rules` empty, so one mistyped tab turned *every* correction in the
+    // realm off at once and said so in a log nobody has open. Kept, the same
+    // typo is an edit that did not take, which is the failure somebody can
+    // actually read off the screen: the weapon sits where it sat this morning.
+    console.error(
+      `weapon offsets: ${(error as Error).message} - keeping the ${rules.length} row(s) already loaded`,
+    );
   }
   return rules;
 }
