@@ -53,16 +53,26 @@ export const MONSTER_ACTIONS = [
 ] as const;
 
 /**
- * Actions offered for a sprite whose act runs past the monster list.
+ * Actions offered for a sprite that does not keep to the monster list.
  *
  * Pets carry three or four action groups beyond die -- the idle and performance
  * animations the client plays for a cordial pet. The client's own names for
  * them are not documented anywhere I can point at, so they are numbered rather
  * than guessed at, and the list is taken from the act in hand so a seven-group
  * pet is not offered slots it does not have.
+ *
+ * Props fall short of the list rather than past it: most of `npc/` is a single
+ * action, and a dropped item is a single group.
  */
 export function actionsForAct(act: Act): readonly { name: string; base: number }[] {
-  const groups = Math.floor(act.actions.length / 8);
+  // A partial group still counts: `아이템/힙색` is one group -- one picture, no
+  // facings -- and flooring that to zero would leave the picker with nothing to
+  // offer for a sprite that renders perfectly well.
+  const groups = Math.max(Math.floor(act.actions.length / 8), 1);
+  // With one action there is no second pose to tell it apart from, so the
+  // monster list's "Stand" would be drawing a contrast the act does not make.
+  // A bonfire burns; it does not stand.
+  if (groups === 1) return [{ name: "Idle", base: 0 }];
   const actions: { name: string; base: number }[] = MONSTER_ACTIONS.filter(
     (action) => action.base / 8 < groups
   ).map((action) => ({ name: action.name, base: action.base }));
@@ -70,6 +80,19 @@ export function actionsForAct(act: Act): readonly { name: string; base: number }
     actions.push({ name: `Special ${group - MONSTER_ACTIONS.length + 1}`, base: group * 8 });
   }
   return actions;
+}
+
+/**
+ * How many facings an act actually holds.
+ *
+ * An action occupies 8 consecutive groups, one per facing, but plenty of the
+ * sprites outside the character and monster folders were never drawn to turn:
+ * a dropped item's act is a single group, and `actionIndex` would wrap all
+ * eight facings back onto it. One group is one picture, so say so rather than
+ * offering a choice that changes nothing and then naming the export after it.
+ */
+export function facingCount(act: Act): number {
+  return act.actions.length >= 8 ? 8 : 1;
 }
 
 export const DIRECTIONS = [
@@ -119,6 +142,16 @@ export type Part = {
    * Per-frame draw order, on the body part only. Parsed from the job's .imf.
    */
   imf?: Imf | null;
+  /**
+   * A hand-written correction to where this part is drawn, in character
+   * pixels, applied on top of whatever the act says.
+   *
+   * Used for weapons, whose art is drawn at the origin rather than hung off an
+   * attach point, so a body built to slightly different proportions than the
+   * art expects grips it a few pixels out. Nothing in either file says by how
+   * much; the table behind this does. See `weaponOffsets.ts`.
+   */
+  offset?: (options: ComposeOptions, frame: number) => { x: number; y: number };
 };
 
 /**
@@ -336,9 +369,15 @@ function drawOpsForFrame(
     part.kind === "weapon" ? weaponZIndex(body, options, frame) : part.zIndex;
 
   for (const part of [...parts].sort((a, b) => zIndexOf(a) - zIndexOf(b))) {
-    ops.push(
-      ...drawOpsForPart(part, cache, options, frame, anchorOffset(part, body, options, frame))
-    );
+    const anchor = anchorOffset(part, body, options, frame);
+    // A correction rides on top of the anchor rather than replacing it, so a
+    // row in the table always means the same thing: move it *this* much from
+    // wherever it would otherwise have landed.
+    const correction = part.offset?.(options, frame);
+    const offset = correction
+      ? { x: anchor.x + correction.x, y: anchor.y + correction.y }
+      : anchor;
+    ops.push(...drawOpsForPart(part, cache, options, frame, offset));
   }
 
   return ops;

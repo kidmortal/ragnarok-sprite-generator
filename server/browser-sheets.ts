@@ -105,6 +105,8 @@ export async function renderSheetInBrowser(
       race: request.race,
       gender: request.gender,
       job: request.job,
+      holds: request.holds,
+      swing: request.swing,
     },
   );
 

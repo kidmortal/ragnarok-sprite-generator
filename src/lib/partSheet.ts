@@ -132,7 +132,25 @@ export function renderPartSheet(
    * renders on a body's terms but wears nothing, so an anchor table would be
    * a few hundred numbers per sheet that nothing can ever read.
    */
-  emitAnchors = part.kind === "body"
+  emitAnchors = part.kind === "body",
+  /**
+   * Sprites drawn **into** this part's own cells, on the poses named here and
+   * on no other -- what the body has in its hands for that pose.
+   *
+   * A weapon is normally a sheet of its own, because a weapon is a choice: the
+   * wearer picks one and an engine hangs it on. A gunner is the case where it
+   * is not. Three poses, three guns, and which gun goes with which pose is not
+   * anybody's choice - it *is* the pose. Welding it in is what stops the two
+   * ever coming apart: the gun is in the frames the swing is in, so a pose
+   * cannot be played empty-handed, and nothing downstream needs a rule about
+   * which of several weapons belongs to which animation.
+   *
+   * A held sprite is unparented exactly as its own sheet would be, so it is
+   * drawn at the character origin with no correction, and in *front* of the
+   * body - where a weapon sits in every frame a body's .imf does not swing it
+   * behind, and the same default `weaponZIndex` falls back to.
+   */
+  holds: Record<string, Part[]> = {}
 ): PartSheet {
   const parented = isParented(part.kind);
   const plans: ActionPlan[] = [];
@@ -156,6 +174,12 @@ export function renderPartSheet(
       // independent of whatever body it ends up on.
       const offset = parented ? { x: -anchor.x, y: -anchor.y } : { x: 0, y: 0 };
       const ops = drawOpsForPart(part, cache, options, frame, offset);
+      // Whatever this pose is holding, over the body and on the body's own
+      // count: `drawOpsForPart` wraps a shorter act itself, and one that draws
+      // nothing at this base contributes nothing rather than a blank cell.
+      for (const held of holds[spec.slug] ?? []) {
+        ops.push(...drawOpsForPart(held, cache, options, frame, { x: 0, y: 0 }));
+      }
       bounds = growBounds(bounds, ops);
       frames.push(ops);
     }

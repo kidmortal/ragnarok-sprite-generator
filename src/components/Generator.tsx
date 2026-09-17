@@ -17,7 +17,9 @@ import {
   type Part,
   type PartKind,
 } from "../lib/compose";
+import { rulesFor, weaponOffset, type Offset } from "../lib/weaponOffsets";
 import { PartPicker } from "./PartPicker";
+import { WeaponNudge } from "./WeaponNudge";
 import { Stage } from "./Stage";
 
 const HEADGEAR_SLOTS = [0, 1, 2];
@@ -150,6 +152,58 @@ export function Generator() {
     };
   }, [body, head, headgears, weapon, shield, garment, equipment?.imfId]);
 
+  // A body may hold its weapon a few pixels out, because weapon art is drawn at
+  // the origin and most jobs inherit art drawn for an earlier body. The table
+  // carries the corrections somebody has already made; `nudge` is the one being
+  // tried out right now. Both hang on the weapon part, since that is what moves.
+  //
+  // This is deliberately separate from loading: it mutates the parts already in
+  // hand and bumps a revision, so dragging a pixel at a time re-renders without
+  // re-decoding every frame of every part.
+  const [nudge, setNudge] = useState<Offset>({ x: 0, y: 0 });
+  const [revision, setRevision] = useState(0);
+  const rules = useMemo(
+    () =>
+      body && weapon ? rulesFor(equipment?.weaponOffsets ?? [], body.name, weapon.name) : [],
+    [equipment?.weaponOffsets, body, weapon]
+  );
+
+  useEffect(() => setNudge({ x: 0, y: 0 }), [body, weapon]);
+
+  /**
+   * Re-reads this body's corrections after one is saved.
+   *
+   * Only the offsets are taken from the response: the full equipment effect
+   * clears the weapon, shield and garment selection, and saving a correction
+   * for the weapon you are looking at should not put the weapon away.
+   */
+  const refreshEquipment = () => {
+    if (!body) return;
+    fetchEquipment(race, gender, body.name)
+      .then((data) =>
+        setEquipment((previous) =>
+          previous ? { ...previous, weaponOffsets: data.weaponOffsets } : data
+        )
+      )
+      .catch(() => {
+        /* the row is written either way; the preview catches up on reselect */
+      });
+  };
+
+  useEffect(() => {
+    for (const part of parts) {
+      if (part.kind !== "weapon") continue;
+      part.offset =
+        rules.length || nudge.x || nudge.y
+          ? (options, frame) => {
+              const base = weaponOffset(rules, options, frame);
+              return { x: base.x + nudge.x, y: base.y + nudge.y };
+            }
+          : undefined;
+    }
+    setRevision((previous) => previous + 1);
+  }, [parts, rules, nudge]);
+
   const exportName = [body?.name, head?.name, weapon?.name, shield?.name, garment?.name]
     .filter(Boolean)
     .join("_");
@@ -257,8 +311,22 @@ export function Generator() {
         showHeadDirection
         exportName={exportName || "character"}
         exportMeta={exportMeta}
+        revision={revision}
         loading={loading}
         error={error}
+        tools={
+          body && weapon ? (
+            <WeaponNudge
+              body={body.name}
+              weapon={weapon.name}
+              options={options}
+              rules={rules}
+              nudge={nudge}
+              onNudge={setNudge}
+              onSaved={() => refreshEquipment()}
+            />
+          ) : null
+        }
       />
     </div>
   );

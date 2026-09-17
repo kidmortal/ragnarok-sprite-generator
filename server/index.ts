@@ -6,6 +6,7 @@ import { foldersForJob } from "./resolver.ts";
 import { listPetsCached } from "./pets.ts";
 import { GENDERS, listParts, RACES, TRUSTED, weaponsForBody, type PartEntry } from "./weapons.ts";
 import { isNarrow } from "./silhouette-table.ts";
+import { saveWeaponOffset, weaponOffsetsForBody } from "./weapon-offsets.ts";
 import {
   DATA_DIR,
   displayName,
@@ -16,6 +17,7 @@ import {
   THUMB_DIR,
 } from "./paths.ts";
 import { registerExportRoutes } from "./export-routes.ts";
+import { PROP_SOURCES } from "./props.ts";
 import { thumbFile, TILE } from "./thumbnail.ts";
 import { label } from "./translate.ts";
 
@@ -117,7 +119,15 @@ app.get("/api/equipment", async (req, res) => {
   const bodyName = typeof req.query.body === "string" ? req.query.body : "";
 
   if (!bodyName) {
-    return res.json({ job: "", origin: null, imfId: null, weapons: [], shields: [], garments: [] });
+    return res.json({
+      job: "",
+      origin: null,
+      imfId: null,
+      weapons: [],
+      shields: [],
+      garments: [],
+      weaponOffsets: [],
+    });
   }
 
   const { job, weaponFolder, origin, weapons } = await weaponsForBody(
@@ -157,7 +167,38 @@ app.get("/api/equipment", async (req, res) => {
   }
 
   const imfId = await imfIdForBody(gender, bodyName);
-  res.json({ job, weaponFolder, origin, imfId, weapons, shields, garments });
+  // Hand-written corrections for this body, which the browser applies as it
+  // composes -- see `resolver-data/weapon_offsets.txt`.
+  const weaponOffsets = weaponOffsetsForBody(bodyName);
+  res.json({ job, weaponFolder, origin, imfId, weapons, shields, garments, weaponOffsets });
+});
+
+/**
+ * Writes one weapon correction, from the preview's nudge control.
+ *
+ * The point of the control is that the number can only be found by looking, and
+ * the point of this route is that having found it you are not then asked to go
+ * and edit a file by hand -- the loop closes where it started. The table is the
+ * record either way: what lands in it is a plain row, which anybody can read,
+ * reorder or delete.
+ */
+app.post("/api/weapon-offsets", express.json({ limit: "16kb" }), async (req, res) => {
+  const row = req.body ?? {};
+  try {
+    const result = await saveWeaponOffset({
+      body: String(row.body ?? ""),
+      weapon: String(row.weapon ?? ""),
+      action: String(row.action ?? "*"),
+      facing: String(row.facing ?? "*"),
+      frames: String(row.frames ?? "*"),
+      dx: Number(row.dx),
+      dy: Number(row.dy),
+      note: String(row.note ?? ""),
+    });
+    res.json({ ok: true, result });
+  } catch (error) {
+    res.status(400).json({ error: (error as Error).message });
+  }
 });
 
 /**
@@ -261,6 +302,14 @@ app.post(
 /** Monster sprites are standalone `.spr`/`.act` pairs in `몬스터/`. */
 app.get("/api/monsters", async (_req, res) => {
   res.json(await listParts("몬스터", "monster"));
+});
+
+/** Props, effects and dropped items: standalone sprites, like a monster. */
+app.get("/api/props", async (req, res) => {
+  const source = typeof req.query.source === "string" ? req.query.source : "npc";
+  const folder = PROP_SOURCES[source];
+  if (!folder) return res.status(400).json({ error: `unknown source: ${source}` });
+  res.json(await listParts(folder, "prop"));
 });
 
 /**

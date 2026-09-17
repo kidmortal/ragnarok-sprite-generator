@@ -60,6 +60,41 @@ other monster — come from `server/resolver-data/pet_names.txt`, a copy of
 rAthena's pet_db that also names the accessories in English. See
 `docs/how-it-works.md`.
 
+**Props tab** — the sprites that are not alive. Same picker and same exports,
+over four folders chosen with the **Source** select:
+
+| Source | Folder | Pairs | What is in it |
+| --- | --- | --- | --- |
+| NPCs & objects | `npc/` | 1572 | bonfires, signposts, postboxes, vending and gacha machines, warp portals, flags, boxes — and the shopkeepers standing among them |
+| Effects | `이팩트/` | 189 | skill and status effects, top level only |
+| Dropped items | `아이템/` | 13097 | the sprite an item wears lying on the ground |
+| Ammunition | `item/` | 22 | bullets and cartridges |
+
+There is no test that tells a prop from a person, so the tab does not claim one:
+`npc/` holds a campfire and a shopkeeper side by side and nothing in either file
+says which is which — the map did. The folder is the grouping, and the filter
+box is how you find the campfire.
+
+What these folders *do* vary is shape, so the action list and the facings are
+read off each act rather than assumed. A dropped item is one group — one
+picture, no facing at all, so the **Facing** select is not offered. Most of
+`npc/` is one action of eight facings, shown as **Idle**. The ~290 monster
+sprites that `npc/` reuses as quest NPCs carry the full stand/move/attack/hurt/dead.
+
+**A prop exports headlessly too**, beside the monsters and the player parts:
+`GET /api/catalog?kind=prop&source=npc` lists a folder (`source=all` sweeps the
+four) and `POST /api/export` renders it like anything else. It ships exactly one
+pose — `stand`, the one action these sprites have — and takes the **party's**
+facing (south-east), since a prop is furniture a party stands beside rather than
+an opponent facing across the field. `source` is asked for rather than optional
+because there is no browsable list here: `npc/` alone is 1572 sprites and
+`아이템/` is thirteen thousand.
+
+What you will *not* find here is a building. Map structures — walls, houses,
+terrain, the furniture you walk around — are not sprites in this game at all;
+they are 3D `.rsm` models under `data/model/`, and nothing in this project reads
+them. A campfire, yes. A house, no.
+
 ## You need Ragnarok sprite data
 
 This app ships **no game assets**. You need a Ragnarok Online client's
@@ -89,6 +124,10 @@ data/
   방패/{job}/        # shields
   로브/{garment}/    # garments
   몬스터/            # monsters
+  npc/              # NPCs and props -- the Props tab
+  이팩트/            # effects
+  아이템/            # dropped items
+  item/             # ammunition
   imf/              # per-job draw order (optional)
 ```
 
@@ -125,7 +164,37 @@ you use to get the sprite data out of `data.grf` in the first place.
 
 Neither project is affiliated with this one, and any bugs here are mine.
 
+## Fixing a weapon that sits a few pixels off
+
+A weapon is drawn at the character origin rather than held in a hand, so the
+same art lands in the same place on every body offered it — and most third and
+fourth jobs are offered art drawn for an earlier job, because their weapon
+folders are byte-identical copies of it. When the newer body is a different
+build, the grip misses. Nothing in the client says by how much; the format that
+could say it, `.imf`, has every one of those offsets set to zero.
+
+So corrections are written by hand in
+`server/resolver-data/weapon_offsets.txt`, one row per body, weapon, action,
+facing and frame range, and applied everywhere a character is composed.
+
+Pick a body and a weapon and the Character tab shows a **Weapon offset** control
+under the preview: X and Y move the weapon a pixel at a time, **Applies to**
+sets how wide the row reaches, and **Save correction** writes it into that file
+— so the next time anyone picks that pairing, it is already right.
+
+The same loop offline, for reviewing more than one at a time:
+
+```
+npm run nudge -- 가드_여_2 --weapon=1463     # the frame at each candidate offset
+npm run contact-sheet -- 가드_여_2 크루세이더_여 --gender=female   # next to the body the art was drawn for
+```
+
+[`docs/weapon-offsets.md`](docs/weapon-offsets.md) is the full description.
+
 ## How it works
 
 File formats, the composition rules, job resolution, the separate-parts export
 and the HTTP API are documented in [`docs/how-it-works.md`](docs/how-it-works.md).
+[`docs/client-sources.md`](docs/client-sources.md) records which file in a game
+client each table was extracted from, and what was searched for and confirmed
+absent.

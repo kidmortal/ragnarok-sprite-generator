@@ -1,5 +1,5 @@
 import { asDomCanvas } from "../lib/canvas";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   DIRECTIONS,
   HEAD_DIRECTIONS,
@@ -19,10 +19,23 @@ type Props = {
   onChange: (patch: Partial<ComposeOptions>) => void;
   /** Head facing only applies to a composed player. */
   showHeadDirection?: boolean;
+  /**
+   * How many of the 8 facings this sprite was drawn for. One means the act
+   * holds a single group, so there is no facing to choose -- see `facingCount`.
+   */
+  facings?: number;
   /** Base name for exported files. */
   exportName: string;
   /** Extra fields for the spritesheet's JSON sidecar. */
   exportMeta?: Record<string, unknown>;
+  /** Controls that belong beside the preview, such as the weapon nudge. */
+  tools?: ReactNode;
+  /**
+   * Bumped when a part is changed in place rather than replaced -- the weapon
+   * nudge moves a part without touching the array or the frame cache, and the
+   * render has to be redone anyway.
+   */
+  revision?: number;
   loading?: boolean;
   error?: string | null;
 };
@@ -34,8 +47,11 @@ export function Stage({
   options,
   onChange,
   showHeadDirection,
+  facings = DIRECTIONS.length,
   exportName,
   exportMeta,
+  tools,
+  revision = 0,
   loading,
   error,
 }: Props) {
@@ -47,7 +63,9 @@ export function Stage({
   const cache = useMemo(() => buildFrameCache(parts), [parts]);
   const rendered = useMemo(
     () => (parts.length === 0 ? null : renderAction(parts, cache, options, 1)),
-    [parts, cache, options]
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `revision` stands
+    // in for an in-place edit to a part, which nothing else here can observe.
+    [parts, cache, options, revision]
   );
 
   useEffect(() => {
@@ -86,7 +104,11 @@ export function Stage({
   }, [rendered, zoom, playing]);
 
   const actionName = actions.find((a) => a.base === options.actionBase)?.name ?? "action";
-  const fileName = `${exportName}_${actionName}_${DIRECTIONS[options.direction]}`.replace(
+  // A sprite with one facing has no facing to name, so it stays out of the file
+  // name and out of the sidecar rather than going in as a "South" that means
+  // nothing.
+  const facingName = facings > 1 ? DIRECTIONS[options.direction] : null;
+  const fileName = `${exportName}_${actionName}${facingName ? `_${facingName}` : ""}`.replace(
     /\s+/g,
     "-"
   );
@@ -117,7 +139,7 @@ export function Stage({
       const meta = {
         name: fileName,
         action: actionName,
-        direction: DIRECTIONS[options.direction],
+        direction: facingName,
         frames: frames.length,
         frameWidth: sheet.frameWidth,
         frameHeight: sheet.frameHeight,
@@ -155,19 +177,21 @@ export function Stage({
             ))}
           </select>
         </label>
-        <label>
-          Facing
-          <select
-            value={options.direction}
-            onChange={(e) => onChange({ direction: Number(e.target.value) })}
-          >
-            {DIRECTIONS.map((name, i) => (
-              <option key={name} value={i}>
-                {name}
-              </option>
-            ))}
-          </select>
-        </label>
+        {facings > 1 && (
+          <label>
+            Facing
+            <select
+              value={options.direction}
+              onChange={(e) => onChange({ direction: Number(e.target.value) })}
+            >
+              {DIRECTIONS.slice(0, facings).map((name, i) => (
+                <option key={name} value={i}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         {showHeadDirection && (
           <label>
             Head
@@ -207,6 +231,8 @@ export function Stage({
           Export spritesheet
         </button>
       </div>
+
+      {tools}
 
       <p className="meta">
         {loading

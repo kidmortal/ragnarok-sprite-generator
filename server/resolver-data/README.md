@@ -13,6 +13,8 @@ sprite layout, per that project's `RESOLVER.md`.
 | `job_pal_names.txt` | Palette base names. Unused here: this data set has no `.pal` files. |
 | `pc_jobs.txt` | The client's own roster of *player* jobs: id, `JT_` constant, English name, sprite name. Generated -- see below. |
 | `job_weapon_overrides.txt` | Hand-checked weapon-folder corrections applied on top of `job_weapon_names.txt`, with the evidence for each in the file. |
+| `narrow_bodies.txt` | Bodies whose outline is too small for the weapon art they are offered, measured by `npm run silhouettes`, plus a hand-marked section. |
+| `weapon_offsets.txt` | Hand-written corrections to where a body holds a weapon, in pixels. Empty until somebody looks at a pairing and writes one -- see below. |
 | `pet_names.txt` | Pet roster: monster aegis name ⇥ accessory item name, the accessory blank when the pet has none. Not from zrenderer -- see below. |
 
 Line numbers are job ids, and a job id above 4000 has 3950 subtracted first.
@@ -161,3 +163,25 @@ part is reachable from a Latin keyboard even when nothing could translate it.
 Measured over 5,999 files: 3,455 were already Latin, 1,868 translate, 676 come
 out partly romanised. By kind, the Korean names translate at 99–100% for
 weapons and shields, 94% for bodies, and 63% for headgears.
+
+## `weapon_offsets.txt`
+
+A weapon is drawn at the character origin rather than hung off an attach point,
+so when a body was drawn to a different build than its (inherited) weapon art
+expects, the grip misses by a few pixels. Nothing in the client says by how
+much: `.imf` has the field for it and every one of those offsets is zero in all
+304 files. So this table is judgement, written down.
+
+```
+body	weapon	action	facing	frames	dx	dy	why
+가드_여_2	로얄가드_여_1463	attack-wait	south-east	0	2	0	shaft misses the fist
+```
+
+`body` and `weapon` take globs, the middle three take `*`, later rows override
+earlier ones, and a malformed row is an error rather than a skipped line. The
+numbers come from `npm run nudge -- <body> --weapon=<name>`, which renders the
+frame once per candidate offset and prints the row to paste.
+
+Full description in [`docs/weapon-offsets.md`](../../docs/weapon-offsets.md);
+the parser and the matching rules are `src/lib/weaponOffsets.ts`, shared by the
+server and the browser.

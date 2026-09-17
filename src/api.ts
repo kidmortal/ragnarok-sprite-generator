@@ -1,3 +1,5 @@
+import type { WeaponOffsetRule } from "./lib/weaponOffsets";
+
 export async function fetchFile(id: string): Promise<ArrayBuffer> {
   const res = await fetch(`/api/file?id=${encodeURIComponent(id)}`);
   if (!res.ok) throw new Error(res.statusText);
@@ -51,6 +53,11 @@ export type Equipment = {
   weapons: PartEntry[];
   shields: PartEntry[];
   garments: PartEntry[];
+  /**
+   * Hand-written corrections to where this body holds a weapon, from
+   * `resolver-data/weapon_offsets.txt`. Empty for almost every body.
+   */
+  weaponOffsets: WeaponOffsetRule[];
 };
 
 /** `body` is the body sprite's file name; the server derives the job from it. */
@@ -64,6 +71,37 @@ export async function fetchEquipment(
   );
   if (!res.ok) throw new Error(res.statusText);
   return res.json();
+}
+
+/** One row of `weapon_offsets.txt`, as the nudge control writes it. */
+export type WeaponOffsetSave = {
+  body: string;
+  weapon: string;
+  /** Action name (`attack-wait`), facing name (`south-east`), frame or range. */
+  action: string;
+  facing: string;
+  frames: string;
+  dx: number;
+  dy: number;
+  note?: string;
+};
+
+/**
+ * Saves a correction into `server/resolver-data/weapon_offsets.txt`.
+ *
+ * Zero removes the row rather than writing one that says nothing, and saving
+ * the same body, weapon, action and facing again rewrites its row in place.
+ */
+export async function saveWeaponOffset(row: WeaponOffsetSave): Promise<void> {
+  const res = await fetch("/api/weapon-offsets", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(row),
+  });
+  if (!res.ok) {
+    const detail = await res.json().catch(() => null);
+    throw new Error(detail?.error ?? res.statusText);
+  }
 }
 
 export async function fetchMonsters(): Promise<PartEntry[]> {
@@ -81,6 +119,27 @@ export type PetEntry = PartEntry & { accessory: PetAccessory | null };
 
 export async function fetchPets(): Promise<PetEntry[]> {
   const res = await fetch("/api/pets");
+  if (!res.ok) throw new Error(res.statusText);
+  return res.json();
+}
+
+/**
+ * The folders behind the Props tab, in the order the picker offers them.
+ *
+ * These are groupings, not classifications -- `npc/` is where the game keeps
+ * both a bonfire and the shopkeeper standing next to it. See `/api/props`.
+ */
+export const PROP_SOURCES = [
+  { key: "npc", label: "NPCs & objects" },
+  { key: "effect", label: "Effects" },
+  { key: "drop", label: "Dropped items" },
+  { key: "ammo", label: "Ammunition" },
+] as const;
+
+export type PropSource = (typeof PROP_SOURCES)[number]["key"];
+
+export async function fetchProps(source: PropSource): Promise<PartEntry[]> {
+  const res = await fetch(`/api/props?source=${source}`);
   if (!res.ok) throw new Error(res.statusText);
   return res.json();
 }

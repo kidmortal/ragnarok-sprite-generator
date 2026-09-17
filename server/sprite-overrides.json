@@ -21,6 +21,20 @@
     "put; the frames behind it move. The manifest records the source as `base`, so an export always",
     "says which substitution it was made with.",
     "",
+    "`holds` welds a weapon into the body's own cells on one pose and no other, by that weapon's own",
+    "name. For a job that does not carry a weapon so much as change between them: the Night Watch's",
+    "second swing is two pistols and the third a rifle, and neither is a thing the wearer picked - the",
+    "pose is the choice. A weapon anybody equips stays a sheet of its own. The name is resolved against",
+    "the weapons of the body being exported, so it can only name a gun that body could really hold, and",
+    "a name that matches nothing fails the export rather than shipping empty hands.",
+    "",
+    "`swing` names which exported pose is the body's ordinary swing - what it plays when nothing asked",
+    "for a pose, which is every auto-attack. `attack` everywhere it is absent, which is everywhere but",
+    "a gunner: the Night Watch levels a minigun on RO's attack 1, which is a heavy thing to do twice a",
+    "second, so its pistols answer by default and the minigun is asked for by name. It changes no",
+    "frames - the poses stay in RO's order under RO's names - and rides in the manifest so a consumer",
+    "needs no table of its own.",
+    "",
     "Match order: `keys` (a manifest key, most specific), then `names` (the sprite's own name), then",
     "`defaults` for the kind. Anything absent uses the defaults, which is nearly everything."
   ],
@@ -39,6 +53,27 @@
     }
   },
   "names": {
+    "프리스트_남": {
+      "attack": "attack3"
+    },
+    "하이프리_남": {
+      "attack": "attack3"
+    },
+    "하이프리_여": {
+      "attack": "attack3"
+    },
+    "몽크_남": {
+      "attack": "attack3",
+      "poses": {
+        "skill": "attack2"
+      }
+    },
+    "몽크_여": {
+      "attack": "attack3",
+      "poses": {
+        "skill": "attack2"
+      }
+    },
     "meister_madogear2_남": {
       "attack": "attack2",
       "poses": {
@@ -58,6 +93,58 @@
       "poses": {}
     },
     "arch_mage_여": {
+      "attack": "attack3",
+      "poses": {}
+    },
+    "night_watch_남": {
+      "attack": "attack3",
+      "poses": {
+        "attack2": "attack2",
+        "attack3": "attack3"
+      },
+      "holds": {
+        "idle": "night_watch_남_handgun2",
+        "attack": "night_watch_남_기관총",
+        "attack2": "night_watch_남_handgun2",
+        "attack3": "night_watch_남_13150"
+      },
+      "swing": "attack2"
+    },
+    "night_watch_여": {
+      "attack": "attack3",
+      "poses": {
+        "attack2": "attack2",
+        "attack3": "attack3"
+      },
+      "holds": {
+        "idle": "night_watch_여_handgun2",
+        "attack": "night_watch_여_기관총",
+        "attack2": "night_watch_여_handgun2",
+        "attack3": "night_watch_여_13150"
+      },
+      "swing": "attack2"
+    },
+    "어세신_남": {
+      "attack": "attack3",
+      "poses": {}
+    },
+    "어세신_여": {
+      "attack": "attack3",
+      "poses": {}
+    },
+    "로드나이트_남": {
+      "attack": "attack2",
+      "poses": {}
+    },
+    "룬나이트_여": {
+      "attack": "attack2",
+      "poses": {}
+    },
+    "가드_남_2": {
+      "attack": "attack3",
+      "poses": {}
+    },
+    "가드_여": {
       "attack": "attack3",
       "poses": {}
     }

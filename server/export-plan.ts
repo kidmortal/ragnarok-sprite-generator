@@ -35,6 +35,18 @@ import {
 export const PLAYER_DIRECTION = 7;
 export const PET_DIRECTION = 7;
 export const MONSTER_DIRECTION = 1;
+/**
+ * A prop takes the **party's** facing, for the party's reason.
+ *
+ * Most props have no front at all - a bonfire is a bonfire from every angle -
+ * and the ones that do (a shopkeeper, a signpost) are furniture the party
+ * walks up to rather than an opponent standing against them. South-east is the
+ * angle everything on the party's side of the field is drawn at, so a prop
+ * beside them agrees with them; a prop that needs to face the other way is
+ * mirrored where it is drawn, which is a decision about a scene and not about
+ * an export.
+ */
+export const PROP_DIRECTION = 7;
 
 /**
  * The head looks **straight** ahead.
@@ -77,6 +89,39 @@ export const HEAD_STRAIGHT = 0;
  */
 export const PLAYER_ACTION_SLUGS = ["idle", "sit", "hurt", "dead", "skill"] as const;
 export const MONSTER_ACTION_SLUGS = ["stand", "attack", "hurt", "dead"] as const;
+/**
+ * **A prop ships `stand` and nothing else**, because that is all it has.
+ *
+ * The sprites under `npc/` carry one action of eight facings - a fire burning,
+ * a shopkeeper idling - and nothing in the file says anything about swinging,
+ * flinching or falling, because a prop does none of those. It is exported
+ * under the monster's own name for its own pose so that a consumer needs no
+ * third case: a sheet with a `stand` on it is something a client already knows
+ * how to stand still and breathe.
+ */
+export const PROP_ACTION_SLUGS = ["stand"] as const;
+
+/**
+ * Poses a player sprite ships **only when its override names a source for
+ * them** - `poses: { channel: "skill" }` - and never by default.
+ *
+ * A player's list above is the whole library's, and adding a pose to it
+ * re-cuts every one of the 451 player-side sheets for a frame nothing draws.
+ * `channel` exists for one class whose one skill is held press after press
+ * and needs a pose of its own beside `attack` and `skill`: RO's casting act
+ * (`skill`, base 96) on a body whose exported `skill` was already taken from
+ * attack 3. Opt-in per sprite, so the library is untouched and the sheet that
+ * wants it says so in the same table that says everything else about it.
+ *
+ * `attack2` and `attack3` are the same bargain from the other end. Nearly every
+ * job in RO animates three swings and uses one, which is what `attack` above is
+ * for - but a gunner really does use all three, one per weapon, and a class
+ * whose skills are told apart by which gun comes up needs the poses under their
+ * own names rather than one chosen for it. Opt-in, because a library where
+ * every body shipped three swings would be half again as large for two poses
+ * that only one job ever plays.
+ */
+export const OPTIONAL_PLAYER_POSES = ["channel", "attack2", "attack3"] as const;
 
 /**
  * Poses that ship a fixed number of frames whatever their act runs for.
@@ -97,6 +142,34 @@ export type SpriteOverride = {
   attack?: AttackVariant;
   /** Exported name → the source pose its frames come from. */
   poses?: Record<string, string>;
+  /**
+   * Exported pose → the sprite drawn into its frames, by that sprite's own
+   * name.
+   *
+   * For a job that does not *carry* a weapon so much as change weapons between
+   * poses: a gunner's second swing is two pistols and the third is a rifle, and
+   * neither is a thing the wearer chose. A weapon anybody picks stays a sheet
+   * of its own; this is for the art the pose is made of. The name is resolved
+   * against the weapons of the body being exported, so it can only ever name a
+   * gun that body could really hold.
+   */
+  holds?: Record<string, string>;
+  /**
+   * Which exported pose this body's **ordinary** swing is - the one it plays
+   * when nothing named a pose, which is every auto-attack it will ever throw.
+   *
+   * `attack` for all but one sprite in the library, because all but one have
+   * only that. A gunner has three and the one it opens with is not the first:
+   * the Night Watch levels a minigun on RO's attack 1 and that is a heavy
+   * thing to do twice a second, so the pistols - its attack 2 - are what it
+   * does by default and the minigun is what a skill asks for by name.
+   *
+   * It changes nothing about the sheet. The poses are exported in RO's own
+   * order under RO's own names, and this is a note on top saying which of them
+   * is the resting answer, carried in the manifest so a consumer does not have
+   * to keep a table of its own.
+   */
+  swing?: string;
 };
 
 type OverrideFile = {
@@ -152,6 +225,8 @@ export function overrideFor(
   return {
     attack: byKey.attack ?? byName.attack ?? byDefault.attack ?? "attack",
     poses: { ...byDefault.poses, ...byName.poses, ...byKey.poses },
+    holds: { ...byDefault.holds, ...byName.holds, ...byKey.holds },
+    swing: byKey.swing ?? byName.swing ?? byDefault.swing,
   };
 }
 
@@ -169,12 +244,24 @@ export function specsFor(
   kind: string,
   override: SpriteOverride,
 ): { specs: SheetActionSpec[]; direction: number; headDirection: number } {
-  const player = kind !== "monster" && kind !== "pet";
+  const prop = kind === "prop";
+  const player = !prop && kind !== "monster" && kind !== "pet";
   const catalogue = player ? PLAYER_SHEET_ACTIONS : MONSTER_SHEET_ACTIONS;
-  const wanted = player ? [...PLAYER_ACTION_SLUGS, "attack"] : [...MONSTER_ACTION_SLUGS];
+  const optional = player
+    ? OPTIONAL_PLAYER_POSES.filter((pose) => override.poses?.[pose] !== undefined)
+    : [];
+  const wanted = player
+    ? [...PLAYER_ACTION_SLUGS, "attack", ...optional]
+    : prop
+      ? [...PROP_ACTION_SLUGS]
+      : [...MONSTER_ACTION_SLUGS];
 
   const baseOf = (slug: string): number | undefined =>
     catalogue.find((spec) => spec.slug === slug)?.base;
+  // The pose the frames actually come from: the attack variant for `attack`,
+  // an override where one is named, and otherwise the pose of the same name.
+  const sourceOf = (slug: string): string =>
+    slug === "attack" ? (override.attack ?? "attack") : (override.poses?.[slug] ?? slug);
 
   // **Laid out in the catalogue's order, not the order they were asked for.**
   // A sheet's frames are packed in spec order, so the order *is* part of the
@@ -182,19 +269,18 @@ export function specsFor(
   // Ilumnia ships puts its frames, and a list that merely contained the same
   // slugs in a different order would re-cut every sheet in the library for
   // nothing. Sorted by the slug's own place in the RO action table - which is
-  // where `attack` sits whatever pose it was actually taken from.
-  const ordered = [...wanted].sort((a, b) => {
-    const at = catalogue.findIndex((spec) => spec.slug === a);
-    const bt = catalogue.findIndex((spec) => spec.slug === b);
-    return at - bt;
-  });
+  // where `attack` sits whatever pose it was actually taken from. An optional
+  // pose has no place of its own in the table, so it takes its *source's*,
+  // which lands `channel` after `skill` exactly where RO's casting act sits.
+  const placeOf = (slug: string): number => {
+    const own = catalogue.findIndex((spec) => spec.slug === slug);
+    return own >= 0 ? own : catalogue.findIndex((spec) => spec.slug === sourceOf(slug));
+  };
+  const ordered = [...wanted].sort((a, b) => placeOf(a) - placeOf(b));
 
   const specs: SheetActionSpec[] = [];
   for (const slug of ordered) {
-    // The pose the frames actually come from: the attack variant for `attack`,
-    // an override where one is named, and otherwise the pose of the same name.
-    const source =
-      slug === "attack" ? (override.attack ?? "attack") : (override.poses?.[slug] ?? slug);
+    const source = sourceOf(slug);
     const base = baseOf(source);
     // A sprite whose act is short simply has nothing at that base; the renderer
     // would draw an empty action, so it is left out of the sheet entirely.
@@ -206,7 +292,13 @@ export function specsFor(
   return {
     specs,
     direction:
-      kind === "monster" ? MONSTER_DIRECTION : kind === "pet" ? PET_DIRECTION : PLAYER_DIRECTION,
+      kind === "monster"
+        ? MONSTER_DIRECTION
+        : kind === "pet"
+          ? PET_DIRECTION
+          : prop
+            ? PROP_DIRECTION
+            : PLAYER_DIRECTION,
     headDirection: HEAD_STRAIGHT,
   };
 }

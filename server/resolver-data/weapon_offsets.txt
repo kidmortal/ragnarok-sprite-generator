@@ -1,0 +1,44 @@
+# Corrections to where a weapon is drawn on a particular body.
+#
+# A weapon is drawn at the character origin, not hung off an attach point, so
+# the same art lands in the same place on every body offered it. When a body was
+# drawn to a different build than the art expects, the grip misses by a few
+# pixels -- and nothing in the .spr or the .act says by how much. The client's
+# own .imf format has a field for exactly this, an (x, y) per action per frame,
+# and every one of them is zero in all 304 files here. So the fix is a judgement
+# somebody makes by looking, and this is where it is written down.
+#
+# Format, tab separated:
+#
+#   body <TAB> weapon <TAB> action <TAB> facing <TAB> frames <TAB> dx <TAB> dy <TAB> why
+#
+#   body     body sprite name, or a glob: 가드_여*
+#   weapon   weapon sprite name, or a glob, or *
+#   action   stand walk sit pick-up attack-wait attack attack-2 attack-3
+#            hurt hurt-2 dead skill, or *
+#   facing   south south-west west north-west north north-east east south-east,
+#            or 0-7, or *
+#   frames   a frame number, an inclusive range (2-4), or *
+#   dx, dy   pixels to move the weapon; +x is right, +y is down
+#   why      free text, and worth filling in -- a row nobody can justify later
+#            is a row nobody dares delete
+#
+# Every matching row applies, in file order, and a later row overrides an
+# earlier one. Put the broad nudge for a body first and the frames that need
+# something else under it. A malformed row is an error at startup rather than a
+# skipped line: a correction that silently does nothing would only be noticed by
+# spotting the misfit all over again.
+#
+# To find the numbers, render the pairing and look:
+#
+#   npm run contact-sheet -- 가드_여_2            # with this table applied
+#   npm run contact-sheet -- 가드_여_2 --raw      # without it, to see the error
+#
+# Corrections apply to the live preview and to everything exported from it. The
+# batch export writes one sheet per part, shared across every body, so it cannot
+# bake a body-specific correction in -- see docs/weapon-offsets.md.
+
+# body	weapon	action	facing	frames	dx	dy	why
+가드_여_3	로얄가드_여_1463	attack-wait	south-east	*	0	-7	from the preview's nudge control
+가드_여	로얄가드_여_1463	attack-wait	south-east	*	4	-8	from the preview's nudge control
+가드_여	로얄가드_여_1116	attack-wait	south-east	*	3	0	from the preview's nudge control

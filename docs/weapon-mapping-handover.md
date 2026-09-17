@@ -73,6 +73,11 @@ Attempts, all rejected with evidence:
 Only reliable check: **render it and look.** That is now
 `npm run contact-sheet` (see below) rather than a scratch script.
 
+Since none of them can find the fit, nothing can derive the *fix* either. That
+is now handled the other way round -- by hand, written down, per body and per
+frame: `server/resolver-data/weapon_offsets.txt`, with `npm run nudge` for
+picking the numbers. See [`weapon-offsets.md`](weapon-offsets.md).
+
 ## Where the mapping actually lives
 
 - **Not in the GRF.** Searched a full 17 GB extract: all 473 `.lub` (decompiled,
@@ -110,6 +115,13 @@ So `job_weapon_names.txt` cannot be regenerated. It stays hand-corrected.
 | `server/extract-item-names.ts` | → `resolver-data/item_names.txt` from the client's English item table |
 | `server/resolver-data/item_names.txt` | 16,937 rows: item id, resource name, English name |
 | `server/resolver-data/glossary.txt` | hand-written Korean → English for what no table carries |
+| `src/lib/weaponOffsets.ts` | the `weapon_offsets.txt` format, parser and matching; shared by server and browser |
+| `server/weapon-offsets.ts` | reads that table for the API, reloading when its mtime changes |
+| `server/resolver-data/weapon_offsets.txt` | hand-written per-body weapon corrections; empty until a pairing is reviewed |
+| `server/nudge.ts` | renders a frame at a grid of offsets (`npm run nudge`) |
+| `src/components/WeaponNudge.tsx` | the preview's X/Y control; writes a row through `POST /api/weapon-offsets` |
+| `docs/weapon-offsets.md` | what the corrections are for and how to author one |
+| `docs/client-sources.md` | which client file each table came from, and what is confirmed absent |
 
 ### Modified
 
@@ -119,8 +131,11 @@ So `job_weapon_names.txt` cannot be regenerated. It stays hand-corrected.
 rasteriser rather than carrying a second one), `server/resolver.ts` (override
 table, repeated-row tie-break, `imfName`), `src/lib/compose.ts` (per-frame weapon z-index),
 `src/components/Generator.tsx`, `src/components/PartPicker.tsx` (`aside` prop),
-`src/api.ts` (`fits` on `BodyEntry`), `src/styles.css`, both READMEs,
-`imf_names.txt`, `job_weapon_names.txt`, `package.json` (two scripts).
+`src/api.ts` (`fits` on `BodyEntry`, `weaponOffsets` on `Equipment`),
+`src/styles.css`, both READMEs, `docs/how-it-works.md`, `imf_names.txt`,
+`job_weapon_names.txt`, `package.json` (three scripts). `src/lib/compose.ts`
+also gained `Part.offset`, a per-frame correction hook applied on top of the
+anchor, and `server/contact-sheet.ts` applies the table unless `--raw`.
 
 **Pre-existing edits not mine, leave alone:** `ExportTab.tsx`, `Stage.tsx`,
 `apng.ts`, `partExport.ts` (and `compose.ts` had prior edits too).
@@ -255,6 +270,11 @@ Worth knowing:
 
 - The 2–2.5px band is six bodies wide and only partly reviewed. Render it and
   hand-mark what is wrong.
+- The nudge control always writes `*` in the frames column: there is no frame
+  scrubber in the preview to pick one with. Per-frame rows are hand-written.
+- `weapon_offsets.txt` is empty. `가드_남_1` and `가드_여_4`, the two the width
+  check names outright, are hidden by the picker rather than corrected -- a row
+  each would let them back in, if somebody renders them and picks the numbers.
 - Only `attack wait` frame 0 is measured. A body that fits at rest and not
   mid-swing would pass. No evidence yet that any does.
 - Doram bodies are not measured at all — the sweep is `인간족` only.
@@ -268,8 +288,9 @@ Worth knowing:
 - Dev server runs on **:3001** under `tsx watch` (auto-reloads on server edits).
   Use a different port for test instances.
 - Scratch scripts need a `node_modules` symlink beside them to resolve `sharp`.
-- Unpacked client: `C:\Gravity\Ragnarok\RagexeU.exe`
-  (WSL: `/mnt/c/Gravity/Ragnarok/RagexeU.exe`). Produced with Magicmida +
-  ScyllaHide; stock `Ragexe.exe` is Themida-packed and useless for this.
-- Full GRF extract: `/mnt/c/Users/kidmo/Desktop/zextractor/output/data`.
+- Client install, GRF extract, hashes and what each one gave:
+  [`client-sources.md`](client-sources.md). Short version: unpacked client at
+  `/mnt/c/Gravity/Ragnarok/RagexeU.exe` (Magicmida + ScyllaHide; stock
+  `Ragexe.exe` is Themida-packed and useless), full extract at
+  `/mnt/c/Users/kidmo/Desktop/zextractor/output/data`.
 - `tsc -b --noEmit` is clean as of handover.

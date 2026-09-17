@@ -65,6 +65,53 @@ h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: v
 
 .meta { text-align: center; color: var(--muted); font-size: 12px; }
 
+/* The weapon nudge, under the preview: two pixel fields and what they write. */
+.nudge {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+  padding: 8px 10px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.nudge-title { color: var(--text); font-weight: 600; }
+.nudge label { display: flex; gap: 6px; align-items: center; }
+.nudge-field { display: flex; align-items: center; gap: 2px; }
+.nudge-field input {
+  width: 46px;
+  text-align: center;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 3px 4px;
+  color: var(--text);
+  font: inherit;
+}
+.nudge button, .nudge select {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 3px 8px;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.nudge button:disabled { opacity: .45; cursor: default; }
+.nudge-field button { padding: 3px 7px; line-height: 1; }
+.nudge-row {
+  flex-basis: 100%;
+  text-align: center;
+  font-size: 11px;
+  opacity: .75;
+  word-break: break-all;
+}
+.nudge-status { flex-basis: 100%; text-align: center; color: var(--text); font-size: 11px; }
+
 /*
  * Paging sentinel. It must span the row and have real height: the grid centres
  * its items, so an auto-width sentinel collapses to zero area and an
@@ -122,6 +169,8 @@ h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: v
   user-select: none;
 }
 .picker-toggle input { margin: 0; cursor: pointer; }
+/* The Props tab puts a source select here instead of a checkbox. */
+.picker-toggle select { flex: 1; min-width: 0; font-size: 11px; }
 .picker-empty {
   margin: 0;
   padding: 12px;

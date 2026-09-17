@@ -19,7 +19,7 @@
  * place and this stays a rendering surface.
  */
 
-import { exportPart } from "./lib/partExport";
+import { exportPart, type HeldPart } from "./lib/partExport";
 import type { SheetActionSpec } from "./lib/partSheet";
 
 type HarnessRequest = {
@@ -33,6 +33,8 @@ type HarnessRequest = {
   race?: string;
   gender?: string;
   job?: string;
+  holds?: HeldPart[];
+  swing?: string;
 };
 
 /** A sheet as it crosses back out of the page: base64, because a Blob cannot. */
@@ -47,6 +49,8 @@ async function renderOne(request: HarnessRequest) {
       race: request.race,
       gender: request.gender,
       job: request.job,
+      holds: request.holds,
+      swing: request.swing,
     },
   );
 

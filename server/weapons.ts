@@ -53,7 +53,8 @@ export type PartLabelKind =
   | "weapon"
   | "shield"
   | "garment"
-  | "monster";
+  | "monster"
+  | "prop";
 
 /**
  * Where a body's weapons came from, most trustworthy first.

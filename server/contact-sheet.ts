@@ -4,6 +4,12 @@
  *   npm run contact-sheet -- --min=1            every body measuring 1px narrow or worse
  *   npm run contact-sheet -- 가드_남_1 크루세이더_남   named bodies, in the order given
  *   npm run contact-sheet -- --min=1 --gender=female --out=cache/review.png
+ *   npm run contact-sheet -- 가드_여_2 --weapon=1163   a named weapon on a named body
+ *   npm run contact-sheet -- 가드_여_2 --raw           without weapon_offsets.txt applied
+ *
+ * Corrections from `resolver-data/weapon_offsets.txt` are applied unless
+ * `--raw` says otherwise, so a sheet shows what the app shows; rendering the
+ * same row both ways is how the numbers in that table get found.
  *
  * The four automatic tests tried before the width check all passed art that
  * plainly does not fit, so the width check is not trusted on its own either:
@@ -25,6 +31,8 @@ import { GENDERS, listParts, RACES, weaponsForBody, type PartEntry } from "./wea
 import { DIRECTIONS, HOLD_ACTION, loadPart, narrowing, reach, weaponSides } from "./silhouette.ts";
 import { paintOps } from "./thumbnail.ts";
 import { drawOpsForPart, type ComposeOptions } from "../src/lib/compose.ts";
+import { weaponOffsetFn } from "../src/lib/weaponOffsets.ts";
+import { weaponOffsetsForBody } from "./weapon-offsets.ts";
 
 const CELL = 120;
 const SCALE = 3;
@@ -36,7 +44,13 @@ const args = process.argv.slice(2);
 const flag = (name: string) => args.find((arg) => arg.startsWith(`--${name}=`))?.split("=")[1];
 const named = args.filter((arg) => !arg.startsWith("--"));
 const min = flag("min") === undefined ? null : Number(flag("min"));
+// Corrections are on by default -- the sheet should show what the app draws.
+// `--raw` turns them off, which is how you see the error you are correcting.
+const raw = args.includes("--raw");
 const genderArg = flag("gender");
+// Which weapon to hang on every body. The default picks one; a correction is
+// written against a particular weapon, so authoring one wants to name it.
+const weaponArg = flag("weapon");
 const out = path.resolve(ROOT, flag("out") ?? "cache/contact-sheet.png");
 
 const raceRoot = RACES.human.root;
@@ -58,11 +72,14 @@ for (const gender of genders) {
     if (weapons.length === 0) continue;
 
     // A sword if the folder has one, since a long blade shows a bad grip most
-    // clearly; otherwise whatever sits in the middle of the list.
-    const weapon =
-      weapons.find((entry) => entry.name.endsWith("_검"))?.name ??
-      weapons[Math.floor(weapons.length / 2)]?.name ??
-      null;
+    // clearly; otherwise whatever sits in the middle of the list. `--weapon`
+    // names one outright, matched loosely so a partial name is enough.
+    const weapon = weaponArg
+      ? weapons.find((entry) => entry.name.toLowerCase().includes(weaponArg.toLowerCase()))
+          ?.name ?? null
+      : weapons.find((entry) => entry.name.endsWith("_검"))?.name ??
+        weapons[Math.floor(weapons.length / 2)]?.name ??
+        null;
 
     let narrow: number | null = null;
     if (min !== null) {
@@ -104,6 +121,11 @@ for (let row = 0; row < subjects.length; row++) {
     : null;
   if (!body) continue;
 
+  const correction =
+    raw || !subject.weapon
+      ? undefined
+      : weaponOffsetFn(weaponOffsetsForBody(subject.body.name), subject.body.name, subject.weapon);
+
   for (let column = 0; column < FACINGS.length; column++) {
     const options: ComposeOptions = {
       actionBase: HOLD_ACTION,
@@ -115,7 +137,8 @@ for (let row = 0; row < subjects.length; row++) {
     const origin = { x: CELL / 2, y: CELL * 0.72 };
     paintOps(cell, CELL, CELL, drawOpsForPart(body.part, body.cache, options, 0, { x: 0, y: 0 }), origin.x, origin.y);
     if (weapon) {
-      paintOps(cell, CELL, CELL, drawOpsForPart(weapon.part, weapon.cache, options, 0, { x: 0, y: 0 }), origin.x, origin.y);
+      const shift = correction?.(options, 0) ?? { x: 0, y: 0 };
+      paintOps(cell, CELL, CELL, drawOpsForPart(weapon.part, weapon.cache, options, 0, shift), origin.x, origin.y);
     }
 
     const left = LABEL + column * CELL * SCALE;
@@ -138,6 +161,7 @@ for (let row = 0; row < subjects.length; row++) {
     text(30, 17, "#fff", `${subject.body.name} (${subject.gender})`),
     text(54, 15, "#8f8", subject.narrow === null ? "" : `${subject.narrow}px narrow`),
     text(76, 13, "#999", `${subject.folder} / ${subject.weapon ?? "no weapon"}`),
+    text(96, 13, "#c9c", raw ? "corrections off (--raw)" : ""),
     `<line x1="0" y1="${top + CELL * SCALE}" x2="${width}" y2="${top + CELL * SCALE}" stroke="#333"/>`
   );
 }

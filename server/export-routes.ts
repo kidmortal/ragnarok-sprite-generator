@@ -23,6 +23,7 @@ import type { Express, Request, Response } from "express";
 
 import { renderSheetInBrowser } from "./browser-sheets.ts";
 import { partKey, type SheetRequest } from "./sheets.ts";
+import type { HeldPart } from "../src/lib/partExport.ts";
 import {
   loadOverrides,
   overrideFor,
@@ -33,6 +34,7 @@ import {
 } from "./export-plan.ts";
 import { foldersForJob } from "./resolver.ts";
 import { listPetsCached } from "./pets.ts";
+import { PROP_SOURCES } from "./props.ts";
 import { GENDERS, listParts, RACES, weaponsForBody, type PartEntry } from "./weapons.ts";
 import { displayName, encodeId, resolveId } from "./paths.ts";
 import { label } from "./translate.ts";
@@ -50,6 +52,8 @@ type CatalogEntry = {
   race?: string;
   gender?: string;
   job?: string;
+  /** Which folder a prop came out of - `npc`, `effect`, `drop` or `ammo`. */
+  source?: string;
 };
 
 const asString = (value: unknown): string => (typeof value === "string" ? value : "");
@@ -95,6 +99,41 @@ async function garmentsForJob(job: string, gender: string): Promise<PartEntry[]>
   return found.filter((entry): entry is PartEntry => entry !== null);
 }
 
+/**
+ * The guns a body's own table says it holds, resolved to sprites.
+ *
+ * The table names them the way a person reading it would - `night_watch_남_handgun2` -
+ * and a name is nothing the browser can fetch, so the lookup happens here,
+ * against **that body's** weapons: the same resolution the catalogue answers
+ * with, so the table can only ever name a gun the body could really hold.
+ *
+ * A name that matches nothing **throws**, and the part fails with it. The
+ * alternative is a body exported with its hands empty in exactly the poses
+ * somebody wrote the table to arm, which is a bug that looks like art and would
+ * be found by somebody playing the class rather than by whoever ran the export.
+ */
+async function heldWeapons(
+  holds: Record<string, string> | undefined,
+  bodyName: string,
+  race: string | undefined,
+  gender: string | undefined,
+): Promise<HeldPart[]> {
+  const wanted = Object.entries(holds ?? {});
+  if (wanted.length === 0) return [];
+
+  const root = (RACES[race as keyof typeof RACES] ?? RACES.human).root;
+  const folder = GENDERS[gender as keyof typeof GENDERS] ?? GENDERS.male;
+  const { weapons } = await weaponsForBody(root, folder, bodyName, new Map());
+
+  return wanted.map(([slug, name]) => {
+    const found = weapons.find((weapon) => weapon.name.toLowerCase() === name.toLowerCase());
+    if (!found) {
+      throw new Error(`no weapon named ${name} on ${bodyName}, for the ${slug} pose`);
+    }
+    return { slug, name: found.name, sprId: found.sprId, actId: found.actId };
+  });
+}
+
 export function registerExportRoutes(app: Express): void {
   /**
    * What can be exported, and everything needed to ask for it.
@@ -132,6 +171,28 @@ export function registerExportRoutes(app: Express): void {
       if (wants("monster")) {
         for (const part of await listParts("몬스터", "monster")) {
           entries.push({ kind: "monster", ...part });
+        }
+      }
+
+      /**
+       * **A prop is asked for by source as well as by name.** `npc/` alone is
+       * hundreds of sprites and the other three folders are thousands, so a
+       * bare `kind=prop` would answer with the whole library - and unlike a
+       * monster, a prop has no list anybody browses. `source` narrows it to one
+       * folder (`npc` by default, which is where the props a scene wants live);
+       * `source=all` is the whole lot, for a search that does not know where to
+       * look.
+       */
+      if (wants("prop")) {
+        const source = asString(req.query.source) || "npc";
+        const folders =
+          source === "all" ? Object.entries(PROP_SOURCES) : [[source, PROP_SOURCES[source]]];
+
+        for (const [name, folder] of folders) {
+          if (!folder) continue;
+          for (const part of await listParts(folder, "prop")) {
+            entries.push({ kind: "prop", ...part, source: name });
+          }
         }
       }
 
@@ -312,6 +373,13 @@ export function registerExportRoutes(app: Express): void {
 
         const { specs, direction, headDirection } = specsFor(kind, table);
 
+        // **Only a body holds anything.** The run's table is the body's and is
+        // handed to everything in the run, which is what keeps a cape swinging
+        // the body's pose - but a gun welded into a head's cells would draw a
+        // second rifle floating where the face is.
+        const holds =
+          kind === "body" ? await heldWeapons(table.holds, name, part.race, part.gender) : undefined;
+
         const request: SheetRequest = {
           kind: kind as SheetRequest["kind"],
           name,
@@ -323,6 +391,11 @@ export function registerExportRoutes(app: Express): void {
           race: part.race,
           gender: part.gender,
           job: part.job,
+          ...(holds && holds.length > 0 ? { holds } : {}),
+          // Like `holds`, a body's business and nobody else's: the run's table
+          // reaches every part in it, and a head that claimed a swing of its
+          // own would be answering a question only the body is asked.
+          ...(kind === "body" && table.swing ? { swing: table.swing } : {}),
         };
 
         // Drawn by Chromium, not by Node: see `browser-sheets.ts` for why the

@@ -7,7 +7,7 @@
  * which the route needs *before* anything is drawn.
  */
 
-import type { PartMeta } from "../src/lib/partExport.ts";
+import type { HeldPart, PartMeta } from "../src/lib/partExport.ts";
 import type { SheetActionSpec } from "../src/lib/partSheet.ts";
 
 /** What one request asks for, once a route has resolved names to sprite ids. */
@@ -23,6 +23,14 @@ export type SheetRequest = {
   race?: string;
   gender?: string;
   job?: string;
+  /**
+   * Sprites welded into this one's own cells, a pose at a time -- the guns a
+   * gunner's three swings are drawn with. Resolved from the overrides table
+   * before anything is rendered, because a name means nothing in the browser.
+   */
+  holds?: HeldPart[];
+  /** Which pose is this body's ordinary swing; see `PartMeta.swing`. */
+  swing?: string;
 };
 
 /**

@@ -12,6 +12,7 @@
     "overrides": "tsx server/seed-overrides.ts",
     "silhouettes": "tsx server/measure-silhouettes.ts",
     "contact-sheet": "tsx server/contact-sheet.ts",
+    "nudge": "tsx server/nudge.ts",
     "start": "NODE_ENV=production tsx server/index.ts",
     "preview": "vite preview"
   },

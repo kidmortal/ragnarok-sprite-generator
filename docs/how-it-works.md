@@ -18,7 +18,11 @@ Following zrenderer:
 - During stand/sit a head/headgear act holds one pose per head direction rather
   than an animation, so the head-facing control indexes into thirds of it.
 - Weapons, shields and garments are **not** parented; their acts are already
-  aligned to the body.
+  aligned to the body. Which also means a weapon lands in the same place on
+  every body offered it, so a body drawn to a different build than its
+  (inherited) weapon art grips it a few pixels out. Corrections to that are
+  hand-written in `server/resolver-data/weapon_offsets.txt` and applied per
+  frame — see [`weapon-offsets.md`](weapon-offsets.md).
 - Monsters use a shorter action list of their own (stand 0, move 8, attack 16,
   hurt 24, dead 32) and compose as a single sprite.
 - Draw order is by z-index: garment -1, body 0, head 1, weapon 2, shield 3,
@@ -209,6 +213,7 @@ still works — just at the old cost. Re-run the command after adding sprites;
 | `GET /api/thumb?id=<spr id>&tile=<px>` | Pre-rendered part preview as WebP; 404 when not generated |
 | `GET /api/monsters` | Every `.spr`/`.act` pair in `몬스터/` |
 | `GET /api/pets` | The tameable subset, each with its accessory act if the data has one |
+| `GET /api/props?source=npc\|effect\|drop\|ammo` | Standalone sprites that are not players or monsters, one flat folder per source |
 | `GET /api/parts?race=human\|doram&gender=male\|female` | Body, head and headgear lists, each pairing a `.spr` with its `.act` |
 | `GET /api/equipment?race&gender&body=<body sprite name>` | Weapon, shield and garment lists for that body's job |
 | `POST /api/encode?w&h` | A packed sheet as raw RGBA in, lossless WebP out |
