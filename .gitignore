@@ -5,3 +5,7 @@ sprite
 *.log
 .DS_Store
 cache
+
+# The incremental build cache. It is rewritten by every `tsc -b`, so a tracked
+# copy is a file that turns up modified in every checkout that has ever built.
+tsconfig.tsbuildinfo
