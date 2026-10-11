@@ -35,14 +35,16 @@ const imfNames = readTable("imf_names.txt");
  * name. See `resolver-data/job_weapon_overrides.txt` for the evidence behind
  * each one.
  */
-const weaponOverrides = new Map<string, string>(
+const weaponOverrides = new Map<string, string[]>(
   readTable("job_weapon_overrides.txt")
     .filter((line) => line.trim() && !line.startsWith("#"))
     .map((line) => {
-      const [job, folder] = line.split("\t");
-      return [job.trim().toLowerCase(), folder.trim()] as const;
+      const [job, folders] = line.split("\t");
+      // `a|b`: the first folder the race has on disk wins, which is how one row
+      // serves a costume that humans and doram both wear.
+      return [job.trim().toLowerCase(), (folders ?? "").split("|").map((f) => f.trim()).filter(Boolean)] as const;
     })
-    .filter(([job, folder]) => job && folder)
+    .filter(([job, folders]) => job && folders.length > 0)
 );
 
 /** Shield name suffixes; index 0 is intentionally empty in the source table. */
@@ -61,6 +63,8 @@ export type JobFolders = {
   imfName: string;
   /** True when `weaponFolder` came from job_weapon_overrides.txt. */
   weaponOverridden: boolean;
+  /** Further folders the override names, tried when `weaponFolder` is not on disk. */
+  weaponFolderAlternates: string[];
   /** False when no table entry matched, so callers can probe the filesystem. */
   matched: boolean;
 };
@@ -87,15 +91,16 @@ for (let id = 0; id < jobNames.length; id++) {
   // Stored as `folder\prefix`, a Windows path fragment.
   const [tableFolder, tablePrefix] = (jobWeaponNames[id] ?? "").split("\\");
   const override = weaponOverrides.get(key);
-  const weaponFolder = override || tableFolder || job;
+  const weaponFolder = override?.[0] || tableFolder || job;
   const entry: JobFolders = {
     job,
     imfName: imfNames[id] || job,
     weaponOverridden: Boolean(override),
     weaponFolder,
+    weaponFolderAlternates: override?.slice(1) ?? [],
     // An override names a folder whose files are prefixed with that folder's
     // own name, so the table's prefix does not carry over.
-    weaponPrefix: override || tablePrefix || tableFolder || job,
+    weaponPrefix: override?.[0] || tablePrefix || tableFolder || job,
     weaponHasGender: true,
     matched: true,
   };
@@ -123,6 +128,7 @@ const MERCENARIES: Record<string, JobFolders> = Object.fromEntries(
       imfName: name,
       weaponOverridden: false,
       weaponFolder: "용병",
+      weaponFolderAlternates: [],
       weaponPrefix: name,
       weaponHasGender: false, // 인간족/용병/활용병_활, with no gender segment
       matched: true,
@@ -139,8 +145,10 @@ const MERCENARIES: Record<string, JobFolders> = Object.fromEntries(
  * (`기사_h_여` → `기사`, `페코페코_기사_h_여` → `페코페코_기사`) while still
  * preferring an exact table hit when there is one.
  *
- * Names that match nothing -- costume bodies such as 결혼 or 산타 -- keep their
- * own name, and simply have no weapon folder on disk.
+ * Names that match nothing keep their own name and simply have no weapon
+ * folder on disk -- unless job_weapon_overrides.txt has a row for the name
+ * itself, which is how a costume the job table never listed (턱시도) is sent
+ * to borrow another job's weapons.
  */
 export function foldersForJob(bodyName: string): JobFolders {
   const name = bodyName.replace(/\.(spr|act)$/i, "");
@@ -155,6 +163,19 @@ export function foldersForJob(bodyName: string): JobFolders {
     if (merc) return merc;
     const hit = byJobName.get(candidate.toLowerCase());
     if (hit) return hit;
+    const override = weaponOverrides.get(candidate.toLowerCase());
+    if (override) {
+      return {
+        job: candidate,
+        imfName: candidate,
+        weaponOverridden: true,
+        weaponFolder: override[0],
+        weaponFolderAlternates: override.slice(1),
+        weaponPrefix: override[0],
+        weaponHasGender: true,
+        matched: true,
+      };
+    }
   }
 
   return {
@@ -162,6 +183,7 @@ export function foldersForJob(bodyName: string): JobFolders {
     imfName: name,
     weaponOverridden: false,
     weaponFolder: name,
+    weaponFolderAlternates: [],
     weaponPrefix: name,
     weaponHasGender: true,
     matched: false,

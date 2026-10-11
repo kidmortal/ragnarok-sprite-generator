@@ -35,6 +35,14 @@
     "frames - the poses stay in RO's order under RO's names - and rides in the manifest so a consumer",
     "needs no table of its own.",
     "",
+    "`caps` ships only the first so many frames of a pose, by exported name, for the one sprite whose",
+    "act runs on into a different picture: the Spirit Handler's casting act ends as a bush, and its",
+    "`channel` stops at the four frames before it. Handed to everything in the body's run, like `poses`.",
+    "",
+    "`only` replaces the kind's whole pose list, for a sprite one page draws and nothing else: a racing",
+    "Poring ships `stand` and `move` (a monster's `move` is otherwise never exported), and a summer outfit",
+    "in the stands above the track ships `sit`.",
+    "",
     "Match order: `keys` (a manifest key, most specific), then `names` (the sprite's own name), then",
     "`defaults` for the kind. Anything absent uses the defaults, which is nearly everything."
   ],
@@ -53,6 +61,13 @@
     }
   },
   "names": {
+    "xm_celine_kimi2": {
+      "poses": {
+        "special1": "special1",
+        "special2": "special2",
+        "special3": "special3"
+      }
+    },
     "프리스트_남": {
       "attack": "attack3"
     },
@@ -147,6 +162,119 @@
     "가드_여": {
       "attack": "attack3",
       "poses": {}
+    },
+    "inquisitor_남": {
+      "poses": {
+        "skill": "attack2"
+      }
+    },
+    "inquisitor_여": {
+      "poses": {
+        "skill": "attack2"
+      }
+    },
+    "spirit_handler_남": {
+      "attack": "attack2",
+      "poses": {
+        "skill": "attack3",
+        "channel": "skill"
+      },
+      "caps": {
+        "channel": 4
+      }
+    },
+    "spirit_handler_여": {
+      "attack": "attack2",
+      "poses": {
+        "skill": "attack3",
+        "channel": "skill"
+      },
+      "caps": {
+        "channel": 4
+      }
+    },
+    "bombporing": {
+      "only": [
+        "stand",
+        "move"
+      ]
+    },
+    "carnival_poring": {
+      "only": [
+        "stand",
+        "move"
+      ]
+    },
+    "clb_gat_galaring": {
+      "only": [
+        "stand",
+        "move"
+      ]
+    },
+    "deviling": {
+      "only": [
+        "stand",
+        "move",
+        "attack",
+        "hurt",
+        "dead"
+      ]
+    },
+    "e_garling": {
+      "only": [
+        "stand",
+        "move"
+      ]
+    },
+    "e_poporing_clover": {
+      "only": [
+        "stand",
+        "move"
+      ]
+    },
+    "jejeling": {
+      "only": [
+        "stand",
+        "move"
+      ]
+    },
+    "e_poring_20": {
+      "only": [
+        "stand",
+        "move"
+      ]
+    },
+    "e_poring_2023": {
+      "only": [
+        "stand",
+        "move"
+      ]
+    },
+    "e_x_poring": {
+      "only": [
+        "stand",
+        "move"
+      ]
+    },
+    "여름_남": {
+      "only": [
+        "sit"
+      ]
+    },
+    "여름_여": {
+      "only": [
+        "sit"
+      ]
+    },
+    "여름2_남": {
+      "only": [
+        "sit"
+      ]
+    },
+    "여름2_여": {
+      "only": [
+        "sit"
+      ]
     }
   },
   "keys": {

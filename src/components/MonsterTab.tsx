@@ -2,13 +2,17 @@ import { useEffect, useMemo, useState } from "react";
 import { fetchFile, fetchMonsters, type PartEntry } from "../api";
 import { parseSpr } from "../lib/spr";
 import { parseAct } from "../lib/act";
-import { MONSTER_ACTIONS, Z_INDEX, type ComposeOptions, type Part } from "../lib/compose";
+import { Z_INDEX, actionsForAct, type ComposeOptions, type Part } from "../lib/compose";
 import { PartPicker } from "./PartPicker";
 import { Stage } from "./Stage";
 
 /**
  * Monsters are single sprites in `몬스터/` -- no head, equipment or attach
  * points -- so the tab is just a picker and the stage.
+ *
+ * The action list is read off the act, as the pet tab's is: most monsters stop
+ * at `dead`, but a boss or a sprite that doubles as a pet carries groups past
+ * it, and a fixed list of five hid them as if the file had none.
  */
 export function MonsterTab() {
   const [monsters, setMonsters] = useState<PartEntry[]>([]);
@@ -62,6 +66,19 @@ export function MonsterTab() {
     };
   }, [selected]);
 
+  const actions = useMemo(
+    () => (parts[0] ? actionsForAct(parts[0].act) : []),
+    [parts]
+  );
+
+  // A pose the new monster does not have falls back to stand rather than
+  // rendering nothing.
+  useEffect(() => {
+    if (actions.length && !actions.some((action) => action.base === options.actionBase)) {
+      setOptions((prev) => ({ ...prev, actionBase: 0 }));
+    }
+  }, [actions, options.actionBase]);
+
   const exportMeta = useMemo(() => ({ monster: selected?.name ?? null }), [selected]);
 
   return (
@@ -77,7 +94,7 @@ export function MonsterTab() {
 
       <Stage
         parts={parts}
-        actions={MONSTER_ACTIONS}
+        actions={actions}
         options={options}
         onChange={(patch) => setOptions((prev) => ({ ...prev, ...patch }))}
         exportName={selected?.name ?? "monster"}

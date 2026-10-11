@@ -235,6 +235,13 @@ export async function weaponsForBody(
       resolved.weaponHasGender ? `${resolved.weaponPrefix}_${gender}` : resolved.weaponPrefix,
       resolved.weaponOverridden ? "override" : "inherited"
     );
+    // An override may list fallbacks for races that lack its first folder:
+    // 결혼 borrows 초보자's weapons on a human and summoner's on a doram.
+    for (const alternate of resolved.weaponFolderAlternates) {
+      if (dirs.some((dir) => dir.toLowerCase() === alternate.toLowerCase())) {
+        add(alternate, `${alternate}_${gender}`, "override");
+      }
+    }
   } else {
     // Bodies with no table entry (운영자2_남, 무희바지_남, costume sets) can still
     // have a weapon folder on disk whose name is a prefix of the body name --
@@ -255,6 +262,7 @@ export async function weaponsForBody(
   // so the same weapon from two folders collapses to the more specific one.
   const byWeapon = new Map<string, PartEntry>();
   let origin: WeaponOrigin | null = null;
+  let supplier: string | null = null;
   for (const source of sources) {
     const prefix = source.prefix.toLowerCase();
     if (!prefix) continue;
@@ -268,14 +276,17 @@ export async function weaponsForBody(
       added++;
     }
     // The first source that actually supplies weapons is the one that counts.
-    if (added && !origin) origin = source.origin;
+    if (added && !origin) {
+      origin = source.origin;
+      supplier = source.folder;
+    }
   }
 
   const weapons = [...byWeapon.values()].sort((a, b) => a.name.localeCompare(b.name, "ko"));
 
   return {
     job: resolved.job,
-    weaponFolder: sources[0]?.folder ?? resolved.weaponFolder,
+    weaponFolder: supplier ?? sources[0]?.folder ?? resolved.weaponFolder,
     origin,
     weapons,
   };

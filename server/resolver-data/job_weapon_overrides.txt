@@ -2,6 +2,10 @@
 #
 # Format: <job name as it appears in job_names.txt> <TAB> <weapon folder>
 #
+# A row may name several folders separated by `|`; the first one the race has
+# on disk is used. A row may also name a body that is in no job table at all,
+# in which case it applies to that body name directly.
+#
 # Only for jobs the table sends somewhere provably wrong and that the
 # substring rule in server/index.ts cannot reach -- it upgrades a job to a
 # folder whose name is spelled out *inside* the job name (타조레인져 -> 레인져),
@@ -22,3 +26,20 @@
 # 로얄가드 exactly as 신페코크루세이더 -- the table's answer here -- is of
 # 크루세이더.
 그리폰가드	신페코로얄가드
+#
+# Costume bodies. The job table files every one of them (결혼, 산타, 여름,
+# 여름2, 한복, 옥토버패스트 -- jobs 22 and 26-30) under a 결혼 weapon folder
+# that no client ever shipped, so the picker dropped them for having nothing
+# to hold. There is no weapon art drawn for these outfits; they are worn over
+# an ordinary human (or doram) frame, and the Novice set -- 초보자, 1st-job
+# proportions, no class flourish -- is the least wrong art to put in their
+# hands. Doram have no 초보자 folder, so their copies fall through to
+# summoner. 턱시도 is the male tuxedo half of the wedding set; the job table
+# does not list it, so the row applies by body name.
+결혼	초보자|summoner
+산타	초보자
+여름	초보자|summoner
+여름2	초보자
+한복	초보자|summoner
+옥토버패스트	초보자
+턱시도	초보자

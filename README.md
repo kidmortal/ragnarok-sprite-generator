@@ -101,14 +101,19 @@ This app ships **no game assets**. You need a Ragnarok Online client's
 `data.grf` and must extract it yourself.
 
 1. Get `data.grf` from a Ragnarok Online client installation.
-2. Extract it with **[zextractor](https://github.com/zhad3/zextractor/)**, which
-   unpacks a GRF and converts the filenames to UTF-8.
-3. Point this app at the extracted `data/sprite` directory: copy or symlink it to
-   `data/` in the project root (gitignored).
-4. Optional: copy the extracted `data/imf` folder in alongside it. Those files
-   carry each job's per-frame draw order, which is what swings a weapon behind
-   the body mid-attack when the character faces away. Without them the weapon
-   simply always draws in front.
+2. Drop it in the project root (gitignored) and run `npm run extract`. It reads
+   the archive in place -- Gravity's encrypted entries included -- and lays out
+   `data\sprite` and `data\imf` under `data/` the way the app expects, with
+   filenames converted to UTF-8. Re-running only writes what changed, and
+   `--only=인간족/몸통` or `--list=여름` narrow it down; see `server/extract-grf.ts`.
+
+   Or do it by hand: extract with
+   **[zextractor](https://github.com/zhad3/zextractor/)**, then copy or symlink
+   the extracted `data/sprite` directory to `data/` in the project root.
+3. Optional (`npm run extract` does this for you): copy the extracted `data/imf`
+   folder in alongside it. Those files carry each job's per-frame draw order,
+   which is what swings a weapon behind the body mid-attack when the character
+   faces away. Without them the weapon simply always draws in front.
 
 The result should look like this — the folder names are Korean, and that is
 expected:

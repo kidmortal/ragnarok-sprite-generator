@@ -2,6 +2,8 @@ node_modules
 dist
 data
 sprite
+# A client's data.grf dropped next to the extract. Never ships with the repo.
+*.grf
 *.log
 .DS_Store
 cache

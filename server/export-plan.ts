@@ -124,6 +124,26 @@ export const PROP_ACTION_SLUGS = ["stand"] as const;
 export const OPTIONAL_PLAYER_POSES = ["channel", "attack2", "attack3"] as const;
 
 /**
+ * The action groups a monster or pet act may carry past `dead`, which a sprite
+ * ships **only when its override names a source for them** -
+ * `poses: { special1: "special1" }` - and never by default.
+ *
+ * RO's monster list stops at dead, but plenty of acts run on: a pet's idle and
+ * performance loops, a boss's extra casts. They have no names anybody documents,
+ * so they are numbered, exactly as the picker numbers them (`Special 1` is base
+ * 40). Opt-in for `OPTIONAL_PLAYER_POSES`'s reason: most monsters have none, and
+ * a sprite that has them ships them because a custom skill is going to play
+ * them by name.
+ */
+export const OPTIONAL_MONSTER_POSES = ["special1", "special2", "special3"] as const;
+
+/** Where each of those groups starts in the act: the three groups after `dead`. */
+const MONSTER_SPECIAL_ACTIONS: SheetActionSpec[] = OPTIONAL_MONSTER_POSES.map((slug, index) => ({
+  slug,
+  base: 40 + index * 8,
+}));
+
+/**
  * Poses that ship a fixed number of frames whatever their act runs for.
  *
  * One entry, and the rule it states is about the pose rather than about size:
@@ -170,6 +190,29 @@ export type SpriteOverride = {
    * to keep a table of its own.
    */
   swing?: string;
+  /**
+   * Poses this sprite ships **fewer frames of than its act runs for**, by
+   * exported name - the first so many, and the rest left on the floor.
+   *
+   * `FRAME_CAPS` is the same cut made for every sprite at once; this is the
+   * one a single sprite needs. The Spirit Handler's casting act runs six
+   * frames and the last two are the body turned into a bush - RO's Doram
+   * hiding - which is a different picture from the four it is held in, so its
+   * `channel` stops at four. Like `poses`, it is handed to everything in the
+   * body's run, so a head and a cape end where the body does.
+   */
+  caps?: Record<string, number>;
+  /**
+   * The **whole** list this sprite ships, by exported name, in place of its
+   * kind's - for a sprite drawn on one page and nowhere else.
+   *
+   * A racing Poring is only ever seen standing at the gate and running down
+   * the track, and a summer outfit only ever sits in the stands above it, so
+   * their swings, flinches and falls would be frames nobody draws. A name
+   * outside the kind's own list - a monster's `move` - is honoured too: the
+   * catalogue has it, and asking for it here is the opt-in.
+   */
+  only?: string[];
 };
 
 type OverrideFile = {
@@ -227,6 +270,8 @@ export function overrideFor(
     poses: { ...byDefault.poses, ...byName.poses, ...byKey.poses },
     holds: { ...byDefault.holds, ...byName.holds, ...byKey.holds },
     swing: byKey.swing ?? byName.swing ?? byDefault.swing,
+    caps: { ...byDefault.caps, ...byName.caps, ...byKey.caps },
+    only: byKey.only ?? byName.only ?? byDefault.only,
   };
 }
 
@@ -246,15 +291,21 @@ export function specsFor(
 ): { specs: SheetActionSpec[]; direction: number; headDirection: number } {
   const prop = kind === "prop";
   const player = !prop && kind !== "monster" && kind !== "pet";
-  const catalogue = player ? PLAYER_SHEET_ACTIONS : MONSTER_SHEET_ACTIONS;
+  const catalogue = player
+    ? PLAYER_SHEET_ACTIONS
+    : [...MONSTER_SHEET_ACTIONS, ...MONSTER_SPECIAL_ACTIONS];
   const optional = player
     ? OPTIONAL_PLAYER_POSES.filter((pose) => override.poses?.[pose] !== undefined)
-    : [];
-  const wanted = player
-    ? [...PLAYER_ACTION_SLUGS, "attack", ...optional]
     : prop
-      ? [...PROP_ACTION_SLUGS]
-      : [...MONSTER_ACTION_SLUGS];
+      ? []
+      : OPTIONAL_MONSTER_POSES.filter((pose) => override.poses?.[pose] !== undefined);
+  const wanted = override.only
+    ? [...override.only]
+    : player
+      ? [...PLAYER_ACTION_SLUGS, "attack", ...optional]
+      : prop
+        ? [...PROP_ACTION_SLUGS]
+        : [...MONSTER_ACTION_SLUGS, ...optional];
 
   const baseOf = (slug: string): number | undefined =>
     catalogue.find((spec) => spec.slug === slug)?.base;
@@ -285,7 +336,7 @@ export function specsFor(
     // A sprite whose act is short simply has nothing at that base; the renderer
     // would draw an empty action, so it is left out of the sheet entirely.
     if (base === undefined) continue;
-    const cap = FRAME_CAPS[slug];
+    const cap = override.caps?.[slug] ?? FRAME_CAPS[slug];
     specs.push(cap === undefined ? { slug, base } : { slug, base, frames: cap });
   }
 
