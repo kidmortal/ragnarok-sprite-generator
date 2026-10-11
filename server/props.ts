@@ -22,6 +22,11 @@ export const PROP_SOURCES: Record<string, string> = {
   effect: "이팩트",
   drop: "아이템",
   ammo: "item",
+  // Not a prop in the folder's own sense - every action in an emotion sheet is
+  // a different emote rather than a facing - but a sheet of looping pictures
+  // with no body to hang on, which is exactly what a prop is to a consumer.
+  // Its rows name their actions one by one (`actions` in the override table).
+  emotion: "emotion",
 };
 
 /** The source a prop's folder came from, or undefined for a folder nothing names. */

@@ -213,6 +213,17 @@ export type SpriteOverride = {
    * catalogue has it, and asking for it here is the opt-in.
    */
   only?: string[];
+  /**
+   * Exported name -> the **raw act action** it is cut from, for a sheet whose
+   * actions are not RO's eight-facing groups at all.
+   *
+   * An emotion sheet is one picture per action - the heart, the sweat drop,
+   * the thumbs-up - laid end to end, so a "pose" and a "facing" mean nothing
+   * there and the base-plus-direction arithmetic would land on the wrong
+   * emote. Naming the action outright, and drawing it facing nowhere, is the
+   * only honest way to export one. It replaces the kind's list entirely.
+   */
+  actions?: Record<string, number>;
 };
 
 type OverrideFile = {
@@ -272,6 +283,7 @@ export function overrideFor(
     swing: byKey.swing ?? byName.swing ?? byDefault.swing,
     caps: { ...byDefault.caps, ...byName.caps, ...byKey.caps },
     only: byKey.only ?? byName.only ?? byDefault.only,
+    actions: byKey.actions ?? byName.actions ?? byDefault.actions,
   };
 }
 
@@ -289,6 +301,15 @@ export function specsFor(
   kind: string,
   override: SpriteOverride,
 ): { specs: SheetActionSpec[]; direction: number; headDirection: number } {
+  // Named act actions, facing nowhere: the base *is* the action.
+  if (override.actions) {
+    return {
+      specs: Object.entries(override.actions).map(([slug, base]) => ({ slug, base })),
+      direction: 0,
+      headDirection: HEAD_STRAIGHT,
+    };
+  }
+
   const prop = kind === "prop";
   const player = !prop && kind !== "monster" && kind !== "pet";
   const catalogue = player

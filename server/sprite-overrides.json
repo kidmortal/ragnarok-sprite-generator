@@ -43,6 +43,10 @@
     "Poring ships `stand` and `move` (a monster's `move` is otherwise never exported), and a summer outfit",
     "in the stands above the track ships `sit`.",
     "",
+    "`actions` names raw act actions outright, for a sheet that is not eight-facing groups at all: the",
+    "emotion sheet is one emote per action, so the beach's reactions are cut from it by number and drawn",
+    "facing nowhere.",
+    "",
     "Match order: `keys` (a manifest key, most specific), then `names` (the sprite's own name), then",
     "`defaults` for the kind. Anything absent uses the defaults, which is nearly everything."
   ],
@@ -982,6 +986,18 @@
     },
     "head_8fc5953d": {
       "attack": "attack2"
+    },
+    "prop_83ce81c2": {
+      "actions": {
+        "cheer": 12,
+        "love": 4,
+        "laugh": 18,
+        "wow": 0,
+        "panic": 23,
+        "cry": 28,
+        "angry": 7,
+        "money": 9
+      }
     }
   }
 }
